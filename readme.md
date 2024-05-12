@@ -3,6 +3,8 @@
 ## Introduction
 StainAI Microglia V1 is an advanced MATLAB software designed to analyze optical microscopy images stained with IBA for identifying six microglia morphotypes: ramified, hypertrophic, bushy, amoeboid, rod, and hyper-rod. Leveraging YOLOv5 object detection (Python), U-net segmentation (MATLAB Deep Learning Toolbox), and a C50 classifier (R), it delivers precise location and segmentation of microglia. The software outputs morphotype maps in JPG format and stores metrics in xls and JSON files adhering to the COCO format. StainAI Microglia V1 is compatible with both Windows and Linux platforms, provided all dependencies are installed.
 
+View the [Analysis Results](https://chaohsiung.github.io/StainAI_pages/) generated from our MATLAB Live Editor script.
+
 ## Prerequisites
 - MATLAB
 - Python with a Conda environment setup
@@ -47,8 +49,6 @@ Navigate to `main_001.m` or `main_001.mlx` and perform the following configurati
 5. **Run Detection**:
     Execute the script to process images and save results in the specified directory.
 
-## 
-View the [Analysis Results](./main_001.html) generated from our MATLAB Live Editor script.
 
 ## Third-Party Code and Libraries
 This project utilizes code and libraries from several third-party sources, detailed below. We acknowledge the authors and provide these details for informational purposes.
