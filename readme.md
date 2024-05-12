@@ -30,7 +30,6 @@ Ensure the following dependencies are installed and configured:
 
 ## Usage
 Navigate to `main_001.m` or `main_001.mlx` and perform the following configurations:
-
 1. **Set MATLAB Path**:
    env.matlab_path='F:\\stainAIMicroglia_v1\\';
 2. **Data Setup**:
@@ -49,6 +48,7 @@ Navigate to `main_001.m` or `main_001.mlx` and perform the following configurati
     Execute the script to process images and save results in the specified directory.
 
 ## 
+View the [Analysis Results](./main_001.html) generated from our MATLAB Live Editor script.
 
 ## Third-Party Code and Libraries
 This project utilizes code and libraries from several third-party sources, detailed below. We acknowledge the authors and provide these details for informational purposes.
