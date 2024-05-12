@@ -1,0 +1,46 @@
+
+R version 4.2.1 (2022-06-23 ucrt) -- "Funny-Looking Kid"
+Copyright (C) 2022 The R Foundation for Statistical Computing
+Platform: x86_64-w64-mingw32/x64 (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+[Previously saved workspace restored]
+
+> # Need installing following packages
+> library(jsonlite)
+Warning message:
+package 'jsonlite' was built under R version 4.3.0 
+> library(caret)
+Loading required package: ggplot2
+Loading required package: lattice
+> library(C50)
+> if (file.exists("F:/StainAIMicroglia_v1//R/C50/C50_v01.RData")) {
++   model_gsdf<-get(load("F:/StainAIMicroglia_v1//R/C50/C50_v01.RData"))
++ } else {
++ # train C50 model
++ }
+> test1df <- fromJSON("F:/data/CR1/CR1 slide 1/cocoJson/CR1 slide 1__Yolo512_Unet_256x256__result__netC4b1_ML__V04regp11.json")
+> test1df <- test1df$annotations
+> test1df <- test1df[,c(16,17,18,19,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45)]
+> test1df_results <- predict(object=model_gsdf, newdata=test1df, type="class")
+> # write to Json files
+> cr1df <- fromJSON("F:/data/CR1/CR1 slide 1/cocoJson/CR1 slide 1__Yolo512_Unet_256x256__result__netC4b1_ML__V04regp11.json")
+> cr1df$annotations$C50 <- test1df_results
+> write(toJSON(cr1df), "F:/data/CR1/CR1 slide 1/cocoJson/CR1 slide 1__Yolo512_Unet_256x256__result__netC4b1_ML__V04regp11__C50v1.json")
+> 
+> proc.time()
+   user  system elapsed 
+  81.10    3.21   87.23 
