@@ -1,31 +1,30 @@
-# StainAI Microglia V1
+# StainAI Microglia
 
 ## Introduction
-StainAI Microglia V1 is an advanced MATLAB software designed to analyze optical microscopy images stained with IBA for identifying six microglia morphotypes: ramified, hypertrophic, bushy, amoeboid, rod, and hyper-rod. Leveraging YOLOv5 object detection (Python), U-net segmentation (MATLAB Deep Learning Toolbox), and a C50 classifier (R), it delivers precise location and segmentation of microglia. The software outputs morphotype maps in JPG format and stores metrics in xls and JSON files adhering to the COCO format. StainAI Microglia V1 is compatible with both Windows and Linux platforms, provided all dependencies are installed.
+StainAI is a sophisticated software package designed for analyzing stained microglia using deep learning, transforming immunohistochemistry images into quantitative maps. It generates maps of morphological phenotypes and morphometric parameters, enabling detailed analysis by drawing regions of interest. The core StainAI program is developed in MATLAB to facilitate the image processing, analysis, and reconstruction pipeline. It integrates YOLOv5 for object detection (Python), U-Net segmentation (MATLAB Deep Learning Toolbox), and the C50 classifier (R). The software outputs morphotype maps in JPG format and saves metrics in xls and JSON files adhering to the COCO format. StainAI is compatible with both Windows and Linux platforms, provided all dependencies are installed.
 
-View the [Analysis Results](https://chaohsiung.github.io/StainAI_pages/) generated from our MATLAB Live Editor script.
+View the [Analysis Results](https://PathoRadi.github.io/StainAI_Microglia/) generated from our MATLAB Live Editor script.
 
 ## Prerequisites
-- MATLAB (>2022b)
-- Python (>3.8) with a Conda environment setup
-- R (>R-4.2.1) with necessary libraries installed
+- MATLAB (>=2022b)
+- Python (>=3.8.0) with a Conda environment setup
+- R (>=R-4.2.1) with necessary libraries installed
 
 ## Dependencies
 Ensure the following dependencies are installed and configured:
 
-- **COCOAPI**: download and installed from the [COCOAPI GitHub repository](https://github.com/cocodataset/cocoapi).
+- **COCOAPI**: download and installed from the [COCOAPI GitHub repository](https://github.com/cocodataset/cocoapi) for Matlab.
   - Configure paths in `main__001.m` or `main_001.mlx`:
     env.coco_path='F:\stainAIgithub\Dependencies\cocoapi-master\';
-  - or put 'cocoapi-master' under matlab path
+    or put 'cocoapi-master' under matlab path.
 
 - **YOLOv5**: Follow installation instructions and download from the [YOLOv5 GitHub repository](https://github.com/ultralytics/yolov5).
-  - Download and save yolo_0504_yolov5m.pt in ~\yolov5pt
   - Configure paths in `main__001.m` or `main_001.mlx`:
     env.path_yolo=[your_path_to_yolov5 filesep 'yolov5-master'];
     env.path_conda_yolo='C:\Users\xxxx\anaconda3\envs\pytyolov5\';
         
-- **R**: Download R from [The R Project website](https://www.r-project.org/). Install the packages `caret`, `C50`, and `limma` via [Bioconductor](https://bioconductor.org/packages/release/bioc/html/limma.html).
-  - Set R paths:
+- **R**: Download R from [The R Project website](https://www.r-project.org/). Install the packages `caret`, `C50`, `jsonlite`, and `limma` via [Bioconductor](https://bioconductor.org/packages/release/bioc/html/limma.html).
+  - Configure paths in `main__001.m` or `main_001.mlx`:
     env.path_R='F:\R\R-4.2.1\bin';
 
 ## Installation
@@ -53,7 +52,7 @@ Navigate to `main__001.m` or `main_001.mlx` and perform the following configurat
 4. **Image Resolution**:
     DataSetInfo.im_pixel_size = 0.464;
 5. **Run Detection**:
-    Execute the script to process images and save results in the specified directory.
+    Execute the script to process images and save results in the specified directory.    
 
 ## Third-Party Code and Libraries
 This project utilizes code and libraries from several third-party sources, detailed below. We acknowledge the authors and provide these details for informational purposes.
