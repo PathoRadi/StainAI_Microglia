@@ -45,9 +45,9 @@ if isfield(DataSetInfo,'atlas_ver')~=1
     if isfield(opts,'atlas_ver')==1
         DataSetInfo.atlas_ver=opts.atlas_ver; %set atlas version by opts.atlas_ver
     else
-        DataSetInfo.atlas_ver='v0';
-        atlas_name0={'background'   ,'background','background'              ,0;              % 0
-            'brain'        ,'brain'     ,'brain'                   ,255;};       % > 255
+        DataSetInfo.atlas_ver='v12';
+        atlas_name0={'background'   ,'background','background'       ,0;              % 0
+                     'brain'        ,'brain'     ,'brain'                   ,255;};       % > 255
 
         try
             DataSetInfo.atlas_rename=cell2table(atlas_name0,'VariableNames',{'atlas_name', 'atlas_name_N','atlas_namefull','id'});
@@ -961,8 +961,17 @@ for si=1:snum % loop for sample
                                                 if isfolder([env.path_yolo_temp 'runs' filesep 'detect'])
                                                     rmdir([env.path_yolo_temp 'runs' filesep 'detect'], 's')
                                                 end
+
                                                 [status, commandOut] = system(string);
-                                               
+                                                if status==1
+                                                    fprintf('check pythorch version\n')
+                                                    fprintf('see: https://github.com/ultralytics/yolov5/issues/6948 \n')
+                                                    % comment out "recompute_scale_factor=self.recompute_scale_factor" in "E:\condaaa\lib\site-packages\torch\nn\modules\upsampling.py"
+                                                    % def forward(self, input: Tensor) -> Tensor:
+                                                    %     return F.interpolate(input, self.size, self.scale_factor, self.mode, self.align_corners,
+                                                    %     #recompute_scale_factor=self.recompute_scale_factor
+                                                    %     )
+                                                end
                                                 
                                                 if ~exist([data_path0temp yolo_folder_result{sh}]);mkdir([data_path0temp yolo_folder_result{sh}]);end
                                                 labletxt=dir([env.path_yolo_temp 'runs' filesep 'detect' filesep 'exp' filesep 'labels' filesep]);
@@ -1309,21 +1318,6 @@ for si=1:snum % loop for sample
 
                                     mpara_save.brain_atlas = imrotate(brain_atlas0,setp.train_rot(tr));
                                     mpara_save.filenameRot=[tfname 'R' num2str(setp.train_rot(tr))];
-                                    % imt=imresize(imp,0.02);
-                                    % figure(111);imshow(imt)
-                                    % stat1=regionprops(atlas_allcell_p,'Area','BoundingBox');
-                                    % bbox1=ceil([reshape([stat1(:).BoundingBox],4,length(stat1))]');
-                                    % imFs = insertShape(imp, 'Rectangle', bbox1,'Color', 255*[1 1 0],'LineWidth',3);
-                                    % figure(112);imshow(imFs);
-                                    % %imF1 = labeloverlay(ims,bwt1L,'Colormap',cmap,'Transparency',0);
-                                    % figure(1);imshow(data1{nn,1}.im0gray);axis on
-                                    % bboxI=[19300 4002]
-                                    % imt=imresize(data1{nn,1}.im0gray,0.02);
-                                    % figure(101);imshow(imt)
-                                    % stat0=regionprops(data1{nn,1}.(select_data1).atlas_allcell_N,'Area','BoundingBox');
-                                    % bbox0=ceil([reshape([stat0(:).BoundingBox],4,length(stat0))]');
-                                    % imFs = insertShape(data1{nn,1}.im0gray, 'Rectangle', bbox0,'Color', [128 255 0],'LineWidth',3);
-                                    % figure(102);imshow(imFs)
 
                                 else
                                     imp=imp0;
@@ -1333,39 +1327,11 @@ for si=1:snum % loop for sample
                                     mpara_save.filenameRot=[tfname ''];
                                 end
 
-% iNL=tablet.MeanIntensity.*(tablet.CA).^0.5;
-% figure(1);hist(iNL,1000)
-% idrm=find(iNL<800)
-% tablet.id_masknii(idrm);
-% dbx=[120 120];
-% bx0=tablet.bbox(idrm,:);
-% clear ims at0f
-% for ii=1:length(idrm);
-%     bx1=fix([bx0(ii,1)+bx0(ii,3)/2-dbx(1)/2+1 bx0(ii,2)+bx0(ii,4)/2-dbx(2)/2+1, dbx(1) dbx(2)]);
-%     ims(ii,:,:)=imp(bx1(2):bx1(2)+bx1(4)-1,bx1(1):bx1(1)+bx1(3)-1);
-%     at0=atlas_allcell_p(bx1(2):bx1(2)+bx1(4)-1,bx1(1):bx1(1)+bx1(3)-1);
-%     at0(at0~=tablet.id_masknii(idrm(ii)))=0;
-%     at0(at0==tablet.id_masknii(idrm(ii)))=1;
-%     at0f(ii,:,:)=at0;
-% end
-% imd=dmib2(ims,20,40);
-% at0d=dmib2(at0f,20,40);
-% at0d=getAtlasEdge(at0d,1);
-% imF1 = labeloverlay(imd,at0d,'Colormap',[1 1 0],'Transparency',0);
-% figure(1111);imshow(imF1)
-
-
-
                                 Rshn=[0 fix(setp.train_imsize{ts}(2)/2) fix(setp.train_imsize{ts}(2)/2) 0];
                                 Dshn=[0 fix(setp.train_imsize{ts}(1)/2) 0 fix(setp.train_imsize{ts}(1)/2)];
-                                %if size(data1{nn,1}.im0gray,1)<=setp.train_imsize{ts}(1) && size(data1{nn,1}.im0gray,2)<=setp.train_imsize{ts}(2)
-                                %    shn=1;
-                                %else
-                                %    shn=1:2;
-                                %end
+
                                 shn=1:2;
                                 for sh=shn
-                                    %imp=data1{nn,1}.im0gray;      %.*uint8(bwbrain);  %bwbrain=logical(abs(data1{nn,1}.imbackground));
                                     imp=circshift(imp,Dshn(sh),1);imp=circshift(imp,Rshn(sh),2);
                                     atlas_allcell_p=circshift(atlas_allcell_p,Dshn(sh),1);atlas_allcell_p=circshift(atlas_allcell_p,Rshn(sh),2);
 
@@ -1472,7 +1438,6 @@ for si=1:snum % loop for sample
                         if ~exist([mpara_test.filepath_brainatlasnum '.zip'],'file')
                             imp=data1{nn,1}.im0gray;      %.*uint8(bwbrain);  %bwbrain=logical(abs(data1{nn,1}.imbackground));
                             imp=circshift(imp,Dshn(sh),1);imp=circshift(imp,Rshn(sh),2);
-                            %data1{nn,1}.masks_CRBG.atlas_allcell_p=circshift(data1{nn,1}.masks_CRBG.atlas_allcell_N,Dshn(sh),1);data1{nn,1}.masks_CRBG.atlas_allcell_p=circshift(data1{nn,1}.masks_CRBG.atlas_allcell_p,Rshn(sh),2);
                             im0sh=circshift(data1{nn,1}.im0,Dshn(sh),1);im0sh=circshift(im0sh,Rshn(sh),2);
                             atlas_brain_sh=circshift(data1{nn,1}.atlas_brain,Dshn(sh),1);atlas_brain_sh=circshift(atlas_brain_sh,Rshn(sh),2);
                             mpara_test.brain_atlas_table=data1{nn,1}.atlas_table;
@@ -1678,18 +1643,11 @@ for si=1:snum % loop for sample
                 
                 filepath_result0=[dinfo1{nn,1}.filepath_image 'results' filesep];
                 if ~isfolder([filepath_result0 'images' filesep]);mkdir([filepath_result0 'images' filesep]);end
-                %if ~isfolder([filepath_result0 'masks' filesep]);mkdir([filepath_result0 'masks' filesep]);end
-                %if ~isdir([filepath_result0 'brain_atlas' filesep]);mkdir([filepath_result0 'brain_atlas' filesep]);end
                 if ~isfolder([filepath_result0 'table' filesep]);mkdir([filepath_result0 'table' filesep]);end
-                %if ~isfolder([filepath_result0 'Mmaps' filesep]);mkdir([filepath_result0 'Mmaps' filesep]);end
 
                 if flag.update_results==1
-                    %delete([filepath_result0 'images' filesep '*.*']);
-                    % delete old results
-
                     delete([filepath_result0 'images' filesep '*.*']);
                     delete([filepath_result0 'masks' filesep '*.*']);
-                    %delete([filepath_result0 'brain_atlas' filesep '*.*']);
                     delete([filepath_result0 'table' filesep '*.*']);
                     delete([filepath_result0 'Mmaps' filesep '*.*']);
                 end

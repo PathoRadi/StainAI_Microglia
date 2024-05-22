@@ -148,18 +148,19 @@ for aa=2:size(atlas_table,1)
         bboxnum=dmib2(bboxnum_4d,drc(1),drc(2));
 
         if isfield(mpara,'brain_atlas')==1
-            if ~exist(mpara.filepath_brainatlasnum, 'dir');mkdir(mpara.filepath_brainatlasnum);end
+            
             imF=dmib2(imt_4d,drc(1),drc(2));
             imF = labeloverlay(imF,bboxedge,'Colormap',[1,0,0],'Transparency',0.5);
             imF = labeloverlay(imF,atF,'Colormap',[0,255,128]/255,'Transparency',0.9);
             imF = labeloverlay(imF,bboxnum,'Colormap',[255,255,0]/255,'Transparency',0);
-            f1=figure(1221);imshow(imF)
+            f1=figure();imshow(imF)
             %saveas(f1,[save_path_01 filesep optpars.atlas_table{aa,1} '__num.jpg'],'jpeg');
-            try
-            imwrite(imF,[mpara.filepath_brainatlasnum filesep atlas_table{aa,1} '__num.jpg']);
-            catch
-            imwrite(imresize(imF,0.5),[mpara.filepath_brainatlasnum filesep atlas_table{aa,1} '__num.jpg']);
-
+            if ~exist(mpara.filepath_brainatlasnum, 'dir');mkdir(mpara.filepath_brainatlasnum);end
+                try
+                    imwrite(imF,[mpara.filepath_brainatlasnum filesep atlas_table{aa,1} '__num.jpg']);
+                catch
+                    imwrite(imresize(imF,0.5),[mpara.filepath_brainatlasnum filesep atlas_table{aa,1} '__num.jpg']);
+                end
             end
         end
     end

@@ -1,34 +1,43 @@
 clear all;close all;
 %% Set path
 % set matlab path
-env.matlab_path='F:\StainAIMicroglia_v1\';
+env.matlab_path='F:\stainAIgithub\StainAIMicroglia_v1\';
 addpath(genpath(env.matlab_path));
 
+% set path of cocoAPI
+env.coco_path='F:\stainAIgithub\Dependencies\cocoapi-master\';
+addpath(genpath(env.coco_path));
+
 % set path of yolo and anaconda or miniconda
-env.path_conda='F:\Anaconda3\';  % path of conda 
-env.path_yolo='F:\StainAIMicroglia_v1\yolov5-master\';
-     % path of yolov5-master, download from https://github.com/ultralytics/yolov5
-env.path_conda_yolo='F:\anaconda3\envs\pytyolov5\';
-     % path of conda environment for yolov5, "pytyolov5" is conda environment name
+env.path_conda='F:\anaconda3\';  % path of conda 
+env.path_yolo='F:\stainAIgithub\Dependencies\yolov5-master\';
+  % path of yolov5-master, download from https://github.com/ultralytics/yolov5
+env.path_conda_yolo='F:\Anaconda3\envs\pytyolov5\';
+  % path of conda environment for yolov5, "pytyolov5" is conda environment name
 
 % set path of R
 env.path_R='F:\R\R-4.2.1\bin';
-% set image path
-env.data_path0='F:\data\';
-% env.data_path0temp='F:\temp\'; % path for save small images
 
-DataSetInfo.sample_ID{1}='UN1';  
+%% Data Setup
+env.data_path0='F:\stainAIgithub\StainAIMicroglia_v1\data\';
+DataSetInfo.sample_ID{1}='CR1';  
+DataSetInfo.renamefile='rename1.xls'; 
 % the programe will rename original image and save rename information in xls file
 % all process need put in the folder of [env.data_path0 DataSetInfo.sample_ID]
 % the rule of sample_ID must less than 3 char
-DataSetInfo.renamefile='rename1.xls';    % xls file for rename image filesnames
-opts.imadj_function='reverse_bw'; % for RGB optical image with white background
+
+%% Image Adjustments
+opts.imadj_function='remove_large_block__v01';  % remove large black empty region in white background image, 
+                                                % also create a mask for region contains cell
+%opts.imadj_function='reverse_bw'; % for RGB optical image, without black empty region in white background
+                                                % create a mask contains whole image
+DataSetInfo.im_reverse=1;   % =1 to revise black and white, = 0 for gray scale images    
 %opts.imadj_function='none'; % for gray scale image with black background
 
-DataSetInfo.im_reverse=1;   % =1 to revise black and white, = 0 for gray scale images    
+%%  Image Resolution,  
 DataSetInfo.im_pixel_size = 0.464; % image resolution, defaul value = 0.464 um
 
-% set processing parameters
+%% set processing parameters
 dinfo=data_info_v36__allusers(env.data_path0, DataSetInfo);
 setp.size_zpe=[512 512];   
 opts.save_imsplit=0;  % >2 to split image into 4 pieces, for large image
