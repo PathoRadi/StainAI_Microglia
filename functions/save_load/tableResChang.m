@@ -3,7 +3,7 @@ table_01=table_00;
 % bbox
 bbox0=table_00.bbox;
 N_bbox=table_00.N_bbox;
-
+area=table_00.area;
 if flag.imzp==1
     bbox0(:,1)=bbox0(:,1)-ceil(size_zpe(2)/2)+1;
     bbox0(:,2)=bbox0(:,2)-ceil(size_zpe(1)/2)+1;
@@ -15,78 +15,83 @@ if pixel_size~=0.464
     %bboxtest=bbox0.*(0.464/pixel_size);
     bbox0=bbox0.*(0.464/pixel_size);
     N_bbox=N_bbox.*(0.464/pixel_size);
+    area=area.*(0.464/pixel_size)^2;
 
-    if istablefield(table_01,'NA')==1
-        table_01.NA=table_00.NA*(0.464/pixel_size).^2;
-    end
-    if istablefield(table_01,'NP')==1
-        table_01.NP=table_00.NP*(0.464/pixel_size);
-    end
-    if istablefield(table_01,'NC_cdist')==1
-        table_01.NC_cdist=table_00.NC_cdist*(0.464/pixel_size);
-    end
-    if istablefield(table_01,'CA')==1
-        table_01.CA=table_00.CA*(0.464/pixel_size).^2;
-    end
-    if istablefield(table_01,'MajorAxisLength')==1
-        table_01.MajorAxisLength=table_00.MajorAxisLength*(0.464/pixel_size);
-    end
-    if istablefield(table_01,'MinorAxisLength')==1
-        table_01.MinorAxisLength=table_00.MinorAxisLength*(0.464/pixel_size);
-    end
-    if istablefield(table_01,'CHA')==1
-        table_01.CHA=table_00.CHA*(0.464/pixel_size).^2;
-    end
-    if istablefield(table_01,'CP')==1
-        table_01.CP=table_00.CP*(0.464/pixel_size);
-    end
-    if istablefield(table_01,'CHP')==1
-        table_01.CHP=table_00.CHP*(0.464/pixel_size);
-    end
-    if istablefield(table_01,'MaxSACH')==1
-        table_01.MaxSACH=table_00.MaxSACH*(0.464/pixel_size);
-    end
-    if istablefield(table_01,'MinSACH')==1
-        table_01.MinSACH=table_00.MinSACH*(0.464/pixel_size);
-    end
-    if istablefield(table_01,'diameterBC')==1
-        table_01.diameterBC=table_00.diameterBC*(0.464/pixel_size);
-    end
-    if istablefield(table_01,'meanCHrd')==1
-        table_01.meanCHrd=table_00.meanCHrd*(0.464/pixel_size);
-    end
-    if istablefield(table_01,'distC_mean')==1
-        table_01.distC_mean=table_00.distC_mean*(0.464/pixel_size);
-    end
-    if istablefield(table_01,'distC_std')==1
-        table_01.distC_std=table_00.distC_std*(0.464/pixel_size);
-    end
-    if istablefield(table_01,'distC_median')==1
-        table_01.distC_median=table_00.distC_median*(0.464/pixel_size);
-    end
-    if istablefield(table_01,'distE_mean')==1
-        table_01.distE_mean=table_00.distE_mean*(0.464/pixel_size);
-    end
-    if istablefield(table_01,'distE_std')==1
-        table_01.distE_std=table_00.distE_std*(0.464/pixel_size);
-    end
-    if istablefield(table_01,'distE_median')==1
-        table_01.distE_median=table_00.distE_median*(0.464/pixel_size);
-    end
-    if istablefield(table_01,'distN_mean')==1
-        table_01.distN_mean=table_00.distN_mean*(0.464/pixel_size);
-    end
-    if istablefield(table_01,'distN_std')==1
-        table_01.distN_std=table_00.distN_std*(0.464/pixel_size);
-    end
-    if istablefield(table_01,'distN_median')==1
-        table_01.distN_median=table_00.distN_median*(0.464/pixel_size);
-    end
+    % only number of pixel need correction
+
+    % if istablefield(table_01,'NA')==1
+    %     table_01.NA=table_00.NA*(0.464/pixel_size).^2;
+    % end
+    % if istablefield(table_01,'NP')==1
+    %     table_01.NP=table_00.NP*(0.464/pixel_size);
+    % end
+    % if istablefield(table_01,'NC_cdist')==1
+    %     table_01.NC_cdist=table_00.NC_cdist*(0.464/pixel_size);
+    % end
+    % if istablefield(table_01,'CA')==1
+    %     table_01.CA=table_00.CA*(0.464/pixel_size).^2;
+    % end
+    % if istablefield(table_01,'MajorAxisLength')==1
+    %     table_01.MajorAxisLength=table_00.MajorAxisLength*(0.464/pixel_size);
+    % end
+    % if istablefield(table_01,'MinorAxisLength')==1
+    %     table_01.MinorAxisLength=table_00.MinorAxisLength*(0.464/pixel_size);
+    % end
+    % if istablefield(table_01,'CHA')==1
+    %     table_01.CHA=table_00.CHA*(0.464/pixel_size).^2;
+    % end
+    % if istablefield(table_01,'CP')==1
+    %     table_01.CP=table_00.CP*(0.464/pixel_size);
+    % end
+    % if istablefield(table_01,'CHP')==1
+    %     table_01.CHP=table_00.CHP*(0.464/pixel_size);
+    % end
+    % if istablefield(table_01,'MaxSACH')==1
+    %     table_01.MaxSACH=table_00.MaxSACH*(0.464/pixel_size);
+    % end
+    % if istablefield(table_01,'MinSACH')==1
+    %     table_01.MinSACH=table_00.MinSACH*(0.464/pixel_size);
+    % end
+    % if istablefield(table_01,'diameterBC')==1
+    %     table_01.diameterBC=table_00.diameterBC*(0.464/pixel_size);
+    % end
+    % if istablefield(table_01,'meanCHrd')==1
+    %     table_01.meanCHrd=table_00.meanCHrd*(0.464/pixel_size);
+    % end
+    % if istablefield(table_01,'distC_mean')==1
+    %     table_01.distC_mean=table_00.distC_mean*(0.464/pixel_size);
+    % end
+    % if istablefield(table_01,'distC_std')==1
+    %     table_01.distC_std=table_00.distC_std*(0.464/pixel_size);
+    % end
+    % if istablefield(table_01,'distC_median')==1
+    %     table_01.distC_median=table_00.distC_median*(0.464/pixel_size);
+    % end
+    % if istablefield(table_01,'distE_mean')==1
+    %     table_01.distE_mean=table_00.distE_mean*(0.464/pixel_size);
+    % end
+    % if istablefield(table_01,'distE_std')==1
+    %     table_01.distE_std=table_00.distE_std*(0.464/pixel_size);
+    % end
+    % if istablefield(table_01,'distE_median')==1
+    %     table_01.distE_median=table_00.distE_median*(0.464/pixel_size);
+    % end
+    % if istablefield(table_01,'distN_mean')==1
+    %     table_01.distN_mean=table_00.distN_mean*(0.464/pixel_size);
+    % end
+    % if istablefield(table_01,'distN_std')==1
+    %     table_01.distN_std=table_00.distN_std*(0.464/pixel_size);
+    % end
+    % if istablefield(table_01,'distN_median')==1
+    %     table_01.distN_median=table_00.distN_median*(0.464/pixel_size);
+    % end
+
+
 end
 
 table_01.bbox=bbox0;
 table_01.N_bbox=N_bbox;
-
+table_01.area=area;
 
 
   % 
