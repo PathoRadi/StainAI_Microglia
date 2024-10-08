@@ -341,7 +341,7 @@ else
         if opt.distCE==1
             parpool('local', maxNumCompThreads);
 
-            parfor bcp =bn1
+            parfor bcp =bn
                 boxtemp=ceil(stats1(bcp).BoundingBox);
                 qq = qnum(bcp);
                 bfcsize=[170 170];%clear xyc cp
