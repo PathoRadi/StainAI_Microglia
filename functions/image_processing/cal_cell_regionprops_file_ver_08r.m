@@ -1,5 +1,9 @@
 function data1=cal_cell_regionprops_file_ver_08r(data1,select_data,flag,varargin)
-% cell_regionprops_09r
+% cell_regionprops_09r, 
+%    find bug in cell_regionprops_09r, the core map should be created before calculate core distance
+% cell_regionprops_09rC: correct version without oarfor for plot figure
+% cell_regionprops_09r_parfor: use parfor to increase processing speed
+
 if isempty(varargin)~=1
     filepath01=varargin{1};
 end
@@ -15,8 +19,6 @@ try
 catch
     score=ones(size(data1.(select_data).coco.annotations,2),1);
 end
-
-
     if isempty(flag.regp_verN)==1 %isfield(flag,'regp_verN')==1
         filenamefull_cell_prop=[filepath_mat_temp select_data '__' flag.regp_ver '.mat'];
         filename_coco=[data1.info.filename_image(1:end-4) '__' select_data '__' flag.result_ver flag.regp_ver '.json'];
@@ -24,7 +26,7 @@ end
             %if ~exist(filenamefull_cell_prop,'file');
             close all;flag.rcal_all=1;
             filenamefull_cell_temp=[filepath_mat_temp select_data '__' flag.regp_ver '_temp.mat'];
-            [tableN,tableNr,atlas_allcellcore_N]=cell_regionprops_09r(data1,select_data,flag,filenamefull_cell_temp,mpara);
+            [tableN,tableNr,atlas_allcellcore_N]=cell_regionprops_09r_parfor(data1,select_data,flag,filenamefull_cell_temp,mpara);
             %%%[tableN,tableNr]=cell_regionprops_01(data1,select_data,filenamefull_cell_temp);
             %             [tableNc,tableNrc,bnSc]=cell_regionprops_08rcheck(data1,select_data,filenamefull_cell_temp,mpara);
             %             Tname=fieldnames(tableNc);
@@ -57,7 +59,7 @@ end
                 %if ~exist(filenamefull_cell_prop,'file');
                 close all
                 filenamefull_cell_temp=[filepath_mat_temp select_data '__' flag.regp_ver '_temp.mat'];
-                [tableN,tableNr,atlas_allcellcore_N]=cell_regionprops_09r(data1,select_data,flag,filenamefull_cell_temp,mpara);
+                [tableN,tableNr,atlas_allcellcore_N]=cell_regionprops_09r_parfor(data1,select_data,flag,filenamefull_cell_temp,mpara);
                 %[tableN,tableNr]=cell_regionprops_01(data1,select_data,filenamefull_cell_temp);
                 save(filenamefull_cell_prop,'tableN','tableNr','atlas_allcellcore_N','-v7.3');
                 data1.(select_data).atlas_allcellcore_N=atlas_allcellcore_N;
@@ -109,7 +111,7 @@ end
 
                     rn_prop={'distCE','CHC','core_Cdist'};
 
-                    [tableN,tableNr,atlas_allcellcore_N,iex]=cell_regionprops_09r(data1,select_data,flag,filenamefull_cell_N,mpara,rn_prop);
+                    [tableN,tableNr,atlas_allcellcore_N,iex]=cell_regionprops_09r_parfor(data1,select_data,flag,filenamefull_cell_N,mpara,rn_prop);
                     %filenamefull_cell_prop_old=[filepath_mat_temp select_data '__' flag.regp_ver 'O.mat'];
                     %copyfile(filenamefull_cell_prop,filenamefull_cell_prop_old);
                     save(filenamefull_cell_propN,'tableN','tableNr','atlas_allcellcore_N','iex','-v7.3');
@@ -166,7 +168,13 @@ end
                 catch
                     close all;flag.rcal_all=0;
                     filenamefull_cell_temp=[filepath_mat_temp select_data '__' flag.regp_ver '_temp.mat'];
-                    [tableN,tableNr,atlas_allcellcore_N]=cell_regionprops_09r(data1,select_data,flag,filenamefull_cell_temp,mpara);
+                    %[tableN,tableNr,atlas_allcellcore_N]=cell_regionprops_09r(data1,select_data,flag,filenamefull_cell_temp,mpara);
+
+                    %[tableN,tableNr,atlas_allcellcore_N]=cell_regionprops_09rC(data1,select_data,flag,filenamefull_cell_temp,mpara);
+
+                    [tableN,tableNr,atlas_allcellcore_N]=cell_regionprops_09r_parfor(data1,select_data,flag,filenamefull_cell_temp,mpara);
+
+
                     %%%[tableN,tableNr]=cell_regionprops_01(data1,select_data,filenamefull_cell_temp);
                     %             [tableNc,tableNrc,bnSc]=cell_regionprops_08rcheck(data1,select_data,filenamefull_cell_temp,mpara);
                     %             Tname=fieldnames(tableNc);

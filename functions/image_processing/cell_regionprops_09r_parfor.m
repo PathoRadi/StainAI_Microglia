@@ -12,6 +12,7 @@ mparaFrac.num_grid=12;
 mparaFrac.flag_bbox=0;
 mparaFrac.startpoint='fixed';%'rand'
 save_filename_temp=[save_filename(1:end-4) '_temp.mat'];
+save_filename_temp2=[save_filename(1:end-4) '_temp2.mat'];
 if isempty(varargin)==1
     opt.core_CA=1;opt.core_rCA=1;opt.core_CP=1;
     opt.core_rCP=1;opt.core_CC=1;opt.core_Cdist=1;  %distance between core center and cell center
@@ -64,6 +65,7 @@ src=get(0,'ScreenSize');
 
 %psize=data1.info.pixel_size;
 psize=0.464; % images must resize into the training image resolution: 0.464um
+
 % for testing data before July,2023, Area must *(0.464/DataSetInfo.im_pixel_size).^2
 
 % len=100;
@@ -172,11 +174,9 @@ distE_slr=zeros(len,1);distE_mean=zeros(len,1);distE_std=zeros(len,1);distE_medi
 dist_para=repmat({''},len,1);
 
 distN_slr=zeros(len,1);distN_mean=zeros(len,1);distN_std=zeros(len,1);distN_median=zeros(len,1);   % distance from nuclei core
+bwcoreCell=repmat({''},len,1);
 
-
-
-
-
+    
 bcpr='';bn='';
 %figure(1);imagesc(atlas_allcellcore_N)
 if exist(save_filename_temp,'file')~=0
@@ -240,6 +240,7 @@ else
         bn=1:len;
     end
 end
+ 
 
 % bn=fix(len/24)*24+1:len;
 %bbi=1;%red_pixel=3;
@@ -251,71 +252,85 @@ end
 %figure(1);imagesc(data1.(select_data).atlas_allcell_N);axis image
 %(A) 33206 (B) bs=[31723 27558  39159 44970  35782 9304 37190 12329];% 
 %for ii=1:length(bs);bns(ii)=bn(find(qnum==bs(ii)));end;tttk=1;
-if mpara.save_figure==1
-    bn=find(qnum==12546);  %12546 <=vip: paper figure cell distance
-end
+% if mpara.save_figure==1
+%     bn=find(qnum==12546);  %12546 <=vip: paper figure cell distance
+% end
 if isempty(bn)~=1
-    for bcp=bn;      %bn;%bn%1:len %bn %647, 668
-        if mod(bcp,3000)==1;tic
-        end
+    delete(gcp('nocreate'))
+    
+    parpool('local', maxNumCompThreads);
+    bLength=length(bn);
+    % Preallocate necessary variables
+    iex = zeros(1, bLength);  % Assuming iex is initialized to a size of 10
 
-        % bcp=1170;%23722
-        %   bb=1270  % 57 %c286 1091 369;    C817 820  890  %N25 351 1093 1112 %1075 784 %N26 75 1068
-        %ims1=double(data1.im0gray(boxtemp(2):boxtemp(2)+boxtemp(4)-1,boxtemp(1):boxtemp(1)+boxtemp(3)-1));
-        %FM_BREN_bbox(bb,1)=fmeasure(ims1, 'BREN'); clear ims1
-        %     cmap2=jet(double(max(data1.(select_data).atlas_allcell_N(:))));
-        %     imF1 = labeloverlay(data1.im0gray,data1.(select_data).atlas_allcell_N,'Colormap',cmap2,'Transparency',0.8);
-        %     figure(2);imshow(imF1);axis on
-        %     figure(1);imagesc(data1.(select_data).atlas_allcell_N);axis image
-        %     mpara.save_figure=0
-        % ii=idath(ii);
-        % bcp=23722 %23722 57 20962% disp cell distance
-        %bcp=find(qnum==20962)  %qnum: 8405 9338 46034 20962,
-        %close all
-        %bcp=bn
+% FM_BREN_bbox1p2 = zeros(bLength, 1);  % Preallocate FM_BREN_bbox1p2
+%     CA = zeros(bLength, 1);
+%     CP = zeros(bLength, 1);
+%     CC = zeros(bLength, 1);
+%     core_CA = zeros(bLength, 1);
+%     core_mean = zeros(bLength, 1);
+%     core_std = zeros(bLength, 1);
+%     core_CP = zeros(bLength, 1);
+%     core_CC = zeros(bLength, 1);
+%     core_rCA = zeros(bLength, 1);
+%     core_rCP = zeros(bLength, 1);
+%     core_Cdist = zeros(bLength, 1);
+%     core_rCdistM = zeros(bLength, 1);
+%     LC = zeros(bLength, 1);
+%     LCstd = zeros(bLength, 1);
+%     FD = zeros(bLength, 1);
+%     CHC = zeros(bLength, 1);
+%     diameterBC = zeros(bLength, 1);
+%     rMmCHr = zeros(bLength, 1);
+%     meanCHrd = zeros(bLength, 1);
+%     bwcoreCell=repmat({''},bLength,1);
 
-        qq=qnum(bcp);
-        boxtemp=ceil(stats1(bcp).BoundingBox);
-        if sum(table_cocoA_sort.bbox(bcp,:)-boxtemp)~=0
-            ie1=find(table_cocoA_sort.bbox(:,1)==boxtemp(1));
-            ie2=find(table_cocoA_sort.bbox(:,2)==boxtemp(2));
-            iex(bcp)=intersect(ie1,ie2);
+    %bwcoreCC = zeros(bLength, 1);
+    % Parfor loop version
+    parfor bcp = bn
+        boxtemp = ceil(stats1(bcp).BoundingBox);
+
+        % Avoid shared variables (intersect function should return to local variable within parfor)
+        if sum(table_cocoA_sort.bbox(bcp, :) - boxtemp) ~= 0
+            ie1 = find(table_cocoA_sort.bbox(:, 1) == boxtemp(1));
+            ie2 = find(table_cocoA_sort.bbox(:, 2) == boxtemp(2));
+            iex(bcp) = intersect(ie1, ie2);  % Storing results in preallocated array
         else
-            iex(bcp)=bcp;
+            iex(bcp) = bcp;
         end
+        % Conditional block for focus measure calculation
+        if opt.FM_BREN_bbox1p2 == 1
+            % Calculate bounding box size
+            bfcsize = fix((boxtemp(3:4) / 2) * mpara.fm_size_increase_ratio);
+            bfc = fix([fix(boxtemp(2) + boxtemp(4) / 2) - bfcsize(2), fix(boxtemp(2) + boxtemp(4) / 2) + bfcsize(2), ...
+                fix(boxtemp(1) + boxtemp(3) / 2) - bfcsize(1), fix(boxtemp(1) + boxtemp(3) / 2) + bfcsize(1)]);
 
-        if opt.FM_BREN_bbox1p2==1
-            bfcsize=fix((boxtemp(3:4)/2)*mpara.fm_size_increase_ratio);
-            bfc=fix([fix(boxtemp(2)+boxtemp(4)/2)-bfcsize(2) fix(boxtemp(2)+boxtemp(4)/2)+bfcsize(2),...
-                fix(boxtemp(1)+boxtemp(3)/2)-bfcsize(1) fix(boxtemp(1)+boxtemp(3)/2)+bfcsize(1)]);
-            ims1p2=double(data1.im0gray(bfc(1):bfc(2),bfc(3):bfc(4)));
-            if mpara.save_figure==1
-                figure(3);imagesc(ims1p2);axis image
-            end
-            %     https://www.mathworks.com/matlabcentral/fileexchange/27314-focus-measure
-            FM_BREN_bbox1p2(bcp,1)=fmeasure(ims1p2, 'BREN'); clear ims3
+            % Extract sub-image for focus measure
+            ims1p2 = double(data1.im0gray(bfc(1):bfc(2), bfc(3):bfc(4)));
+
+            % Apply focus measure calculation
+            FM_BREN_bbox1p2(bcp, 1) = fmeasure(ims1p2, 'BREN');
         end
-
-
-        %figure(2);imagesc_bw(ims2,[0 255],'gray',255,{stats1(bcp).Image},{'r'},-1,-1);axis image;size(ims2);
-        %  bcp
-        if opt.core_Cdist==1 || opt.core_rCdistM==1
-            state_cell=regionprops(uint8(stats1(bcp).Image),'Centroid','MaxFeretProperties');
-        end
+        %%if opt.core_Cdist==1 || opt.core_rCdistM==1
+        state_cell=regionprops(uint8(stats1(bcp).Image),'Centroid','MaxFeretProperties');
+        %end
         if opt.CA==1 || opt.core_rCA;
-            CA(bcp,1)=sum(stats1(bcp).Image(:)).*psize.*psize;end
+            CA(bcp,1)=sum(stats1(bcp).Image(:)).*psize.*psize;
+        end
+        rp_bwt=regionprops(stats1(bcp).Image, 'Perimeter');
+
         if opt.CP==1 || opt.core_rCP==1 || opt.CC==1
             %cpi=[state_cell(:).Perimeter];
-            rp_bwt=regionprops(stats1(bcp).Image, 'Perimeter');
             cpi=[rp_bwt(:).Perimeter];
             CP(bcp,1)=sum(cpi)*psize;
         end
+
         if opt.CC==1;
             %rp_bwt=regionprops(stats1(bcp).Image, 'Perimeter','Area');
             CA0=sum(stats1(bcp).Image(:)).*psize.*psize;
             cpi=[rp_bwt(:).Perimeter];
             CP0=sum(cpi)*psize;
-            CC(bcp,1)=4*pi*CA0./(CP0.^2);clear CA0 CP0
+            CC(bcp,1)=4*pi*CA0./(CP0.^2);%clear CA0 CP0
 
             %bwim2=imresize(stats1(bcp).Image,size(stats1(bcp).Image)*10,'nearest');
             %figure(1);imagesc(bwim2);axis image
@@ -325,7 +340,6 @@ if isempty(bn)~=1
             %CC(bcp,1)=4*pi*ca0./(cp0.^2);
         end
 
-
         if opt.core_CA==1 || opt.core_rCA==1 || opt.core_CP==1 || opt.core_rCP==1 || opt.core_CC==1 || opt.core_Cdist==1 || opt.core_rCdistM==1 || opt.core_mean==1 || opt.core_std==1
             ims2=double(data1.im0gray(boxtemp(2):boxtemp(2)+boxtemp(4)-1,boxtemp(1):boxtemp(1)+boxtemp(3)-1));
             if sum(stats1(bcp).Image(:))<=mpara.threshold_size(1)
@@ -334,45 +348,132 @@ if isempty(bn)~=1
                 % bwcore=get_cellcore_v02(ims2,stats1(bb).Image,3);  %reduce-edge , kmean, intersect
                 bwcore=get_cellcore_v03(ims2,stats1(bcp).Image,mpara.reduc_p); % kmean => reduce edge
             end
-            atmask0=atlas_allcellcore_N(boxtemp(2):boxtemp(2)+boxtemp(4)-1,boxtemp(1):boxtemp(1)+boxtemp(3)-1);
-            atmask0(bwcore==1)=qnum(bcp);% figure(1);imagesc(atmask0)
-            atlas_allcellcore_N(boxtemp(2):boxtemp(2)+boxtemp(4)-1,boxtemp(1):boxtemp(1)+boxtemp(3)-1)=atmask0;
-            bwcore2=imresize(bwcore,size(bwcore)*4,'nearest');
-            % set uint8, only area will be merge
+            bwcoreCell{bcp}=bwcore;
+ 
+            % % set uint8, only area will be merge
             state_core=regionprops(uint8(bwcore), 'Perimeter','Circularity','Area','Centroid');
-            if opt.core_CA==1 || opt.core_rCA;core_CA(bcp,1)=sum(bwcore(:)).*psize.*psize;end
-            if opt.core_mean==1;core_mean(bcp,1)=mean(ims2(bwcore==1));end
-            if opt.core_std==1;core_std(bcp,1)=std(ims2(bwcore==1));end
+            if opt.core_CA==1 || opt.core_rCA;
+                core_CA(bcp,1)=sum(bwcore(:)).*psize.*psize;end
+            if opt.core_mean==1;
+                core_mean(bcp,1)=mean(ims2(bwcore==1));end
+            if opt.core_std==1;
+                core_std(bcp,1)=std(ims2(bwcore==1));end
             if opt.core_CP==1 || opt.core_rCP==1;
                 rp_bwt=regionprops(bwcore, 'Perimeter');
-                core_cpi=[rp_bwt(:).Perimeter];core_CP(bcp,1)=sum(core_cpi)*psize;
+                core_cpi=[rp_bwt(:).Perimeter];
+                core_CP(bcp,1)=sum(core_cpi)*psize;
             end
             if opt.core_CC==1;
                 %bwcore2=imresize(bwcore,size(bwcore)*10,'nearest');
                 state_core2=regionprops(bwcore, 'Perimeter','Circularity','Area');
                 core_ca0=sum(bwcore(:));core_cpi=[state_core2(:).Perimeter];core_cp0=sum(core_cpi);
-                core_CC(bcp,1)=4*pi*core_ca0./(core_cp0.^2);clear core_ca0 core_cp0
+                core_CC(bcp,1)=4*pi*core_ca0./(core_cp0.^2);
             end
-            if opt.core_rCA==1;core_rCA(bcp,1)=core_CA(bcp,1)/CA(bcp,1);end
-            if opt.core_rCP==1;core_rCP(bcp,1)=core_CP(bcp,1)/CP(bcp,1);end
+            if opt.core_rCA==1;
+                core_rCA(bcp,1)=core_CA(bcp,1)./CA(bcp,1);end
+            if opt.core_rCP==1;
+                core_rCP(bcp,1)=core_CP(bcp,1)./CP(bcp,1);end
             if opt.core_Cdist==1;
                 core_Cdist(bcp,1)=(sum((state_cell.Centroid-state_core.Centroid).^2).^0.5)*psize;end
             if opt.core_rCdistM==1
                 core_rCdistM(bcp,1)=(sum((state_cell.Centroid-state_core.Centroid).^2).^0.5)./state_cell.MaxFeretDiameter;end
+
         end
-        %%imdisp=data1.im0gray(boxtemp(2)+fix(boxtemp(4)/2)-fix(disp_siz/2):boxtemp(2)+fix(boxtemp(4)/2)+fix(disp_siz/2),boxtemp(1)+fix(boxtemp(3)/2)-fix(disp_siz/2):boxtemp(1)+fix(boxtemp(3)/2)+fix(disp_siz/2));
-        %%bw_disp=data1.(select_data).atlas_allcell_N(boxtemp(2)+fix(boxtemp(4)/2)-fix(disp_siz/2):boxtemp(2)+fix(boxtemp(4)/2)+fix(disp_siz/2),boxtemp(1)+fix(boxtemp(3)/2)-fix(disp_siz/2):boxtemp(1)+fix(boxtemp(3)/2)+fix(disp_siz/2));
-        %%bw_core_disp=atlas_allcellcore_N(boxtemp(2)+fix(boxtemp(4)/2)-fix(disp_siz/2):boxtemp(2)+fix(boxtemp(4)/2)+fix(disp_siz/2),boxtemp(1)+fix(boxtemp(3)/2)-fix(disp_siz/2):boxtemp(1)+fix(boxtemp(3)/2)+fix(disp_siz/2));
-        %%% disp & save
+
+        if opt.FD==1 || opt.LC==1
+            % figure(1);imagesc(stats1(bcp).Image)
+            %  rsizeN=256/max(size(stats1(bcp).Image));
+            %  bwfd2=imresize(stats1(bcp).Image,size(stats1(bcp).Image)*rsizeN,'nearest');
 
 
-        if opt.distCE==1
+            bwfdsize=size(stats1(bcp).Image)+mpara.FD_size_increase;
+            bwfd=zeros(bwfdsize);
+            bwfd(fix(size(bwfd,1)/2)-fix(size(stats1(bcp).Image,1)/2)+1:fix(size(bwfd,1)/2)-fix(size(stats1(bcp).Image,1)/2)+size(stats1(bcp).Image,1),...
+                fix(size(bwfd,2)/2)-fix(size(stats1(bcp).Image,2)/2)+1:fix(size(bwfd,2)/2)-fix(size(stats1(bcp).Image,2)/2)+size(stats1(bcp).Image,2))=stats1(bcp).Image;
+
+
+            [fracL]=lacunarity_Fraclac_chh02(bwfd,mparaFrac);
+            if opt.LC==1;
+                LC(bcp,1)=fracL.Lacunarity;
+                LCstd(bcp,1)=fracL.Lacunarity_std;end
+            if opt.FD==1;
+                %FD1(bcp,1)=fractalanalysis_chh01(stats1(bcp).Image);
+                %FD1(bcp,1)=fractalanalysis_chh01(bwfd);
+                FD(bcp,1)=-mean(fracL.F__logSlope__DBcounts);
+            end
+        end
+
+        % if opt.CHC==1 || opt.diameterBC==1 || opt.rMmCHr==1 || opt.meanCHrd==1
+        % end
+        %     if opt.CHC==1 || opt.rMmCHr==1
+        %         imCH2=imresize(stats1(bcp).ConvexImage,size(stats1(bcp).ConvexImage)*10,'nearest');
+        %     end
+        if opt.CHC==1 || opt.diameterBC==1 || opt.rMmCHr==1 || opt.meanCHrd==1
+            statsCH(bcp)=regionprops(stats1(bcp).ConvexImage,'Perimeter','Circularity','MaxFeretProperties','MinFeretProperties','Centroid','ConvexHull');
+        end
+
+        if opt.CHC==1
+            stats1_chc=regionprops(stats1(bcp).ConvexImage, 'Perimeter','Circularity','Area');
+            % figure(1);imagesc(imCH2);figure(2);imagesc(stats1(bcp).ConvexImage)
+            ca0=sum(stats1(bcp).ConvexImage(:));cpi=[stats1_chc(:).Perimeter];cp0=sum(cpi);
+            CHC(bcp,1)=4*pi*ca0./(cp0.^2);
+        end
+        %if opt.diameterBC==1 || opt.rMmCHr==1
+            [c1,R1] = minboundcircle(stats1(bcp).ConvexHull(:,1),stats1(bcp).ConvexHull(:,2));   % L
+            diameterBC(bcp,1)=R1*2*psize;
+        %end
+
+        if opt.rMmCHr==1 % cal from resize image v07r
+            %figure(1);imagesc(imCH2);axis image
+            %stats1_chc=regionprops(uint8(imCH2),'ConvexHull');
+            %[~,R1] = minboundcircle(stats1_chc.ConvexHull(:,1),stats1_chc.ConvexHull(:,2));
+            %[bwch_edgef]=BW_Edge_Modified_v09(imCH2, -1);[yb, xb]=find(bwch_edgef==true);[C2,R2] = incircle(xb,yb);
+            %rMmCHr(bcp,:)=R1/R2;
+
+
+            if size(stats1(bcp).ConvexImage,1)<=mpara.threshold_length(1) || size(stats1(bcp).ConvexImage,2)<=mpara.threshold_length(2)
+                rMmCHr(bcp,:)=1;   %N
+            else
+                [bwch_edgef]=BW_Edge_Modified_v09(stats1(bcp).ConvexImage, -1);
+                [yb, xb]=find(bwch_edgef==true);
+                [C2,R2] = incircle(xb,yb);
+                rMmCHr(bcp,:)=R1/R2;   %N
+            end
+        end
+        if opt.meanCHrd==1
+            if size(stats1(bcp).ConvexImage,1)<=mpara.threshold_length(1) || size(stats1(bcp).ConvexImage,2)<=mpara.threshold_length(1) || sum(stats1(bcp).ConvexImage(:))<=mpara.threshold_size(2)
+                meanCHrd(bcp,1)=0;
+            else
+                [bwch_edgef]=BW_Edge_Modified_v09(stats1(bcp).ConvexImage, -1);
+                [yb, xb]=find(bwch_edgef==true);
+                ys=round(statsCH(bcp).Centroid(2));xs=round(statsCH(bcp).Centroid(1));
+                dist00_bwch=((yb-repmat(ys,length(yb),1)).^2+(xb-repmat(xs,length(xb),1)).^2).^0.5;
+                meanCHrd(bcp,1)=psize*mean(dist00_bwch);               % mean radii of convex hull
+            end
+        end
+    end
+    delete(gcp('nocreate'))
+   
+
+    for bcp=bn
+        boxtemp = ceil(stats1(bcp).BoundingBox);
+        atmask0=atlas_allcellcore_N(boxtemp(2):boxtemp(2)+boxtemp(4)-1,boxtemp(1):boxtemp(1)+boxtemp(3)-1);
+        atmask0(bwcoreCell{bcp}==1)=qnum(bcp);% figure(1);imagesc(atmask0)
+        atlas_allcellcore_N(boxtemp(2):boxtemp(2)+boxtemp(4)-1,boxtemp(1):boxtemp(1)+boxtemp(3)-1)=atmask0;
+    end
+%figure(1);imagesc(atlas_allcellcore_N)
+
+
+    if opt.distCE==1
+        parpool('local', maxNumCompThreads);
+
+        parfor bcp =bn1
             %mpara.save_figure=0;
             boxtemp=ceil(stats1(bcp).BoundingBox);
-            bfcsize=[170 170];clear xyc cp
+            qq = qnum(bcp);
+            bfcsize=[170 170];%clear xyc cp
             bfc=fix([fix(boxtemp(2)+boxtemp(4)/2)-bfcsize(2)+1 fix(boxtemp(2)+boxtemp(4)/2)+bfcsize(2),...
                 fix(boxtemp(1)+boxtemp(3)/2)-bfcsize(1)+1 fix(boxtemp(1)+boxtemp(3)/2)+bfcsize(1)]); %y-x
-
             if bfc(1)<=0;bfc(2)=abs(bfc(1))+bfc(2)+1;bfc(1)=1;end
             if bfc(3)<=0;bfc(4)=abs(bfc(3))+bfc(4)+1;bfc(3)=1;end
             if bfc(2)>size(data1.im0gray,1);bfc(1)=bfc(1)-(size(data1.im0gray,1)-bfc(2))+1;bfc(2)=size(data1.im0gray,1);end
@@ -380,13 +481,13 @@ if isempty(bn)~=1
 
             ims1p2=double(data1.im0gray(bfc(1):bfc(2),bfc(3):bfc(4)));
             ims1p3=data1.im0(bfc(1):bfc(2),bfc(3):bfc(4),:);
-            %figure(1);imagesc(at_temp);axis image
 
             at_temp=data1.(select_data).atlas_allcell_N(bfc(1):bfc(2),bfc(3):bfc(4));
             at_tempN=atlas_allcellcore_N(bfc(1):bfc(2),bfc(3):bfc(4));
-            at_tempRN=0*at_tempN;
-            at_tempR=0*at_temp;q1=unique(at_temp);q1=q1(q1~=0);
-
+            at_tempRN=zeros(size(at_tempN));
+            at_tempR=zeros(size(at_tempN));
+            
+            q1=unique(at_temp);q1=q1(q1~=0);
             q2=unique(at_tempN);q2=q2(q2~=0);
             qd=setdiff(q1,q2);
             at_temp2=at_temp;
@@ -398,7 +499,6 @@ if isempty(bn)~=1
             q1=unique(at_temp);q1=q1(q1~=0);
             an=find(q1==qq);
             %figure(3);imagesc(at_temp2);axis image
-
             % if bcp==15
             %     bcp;mpara.save_figure=1;
             % end
@@ -407,65 +507,62 @@ if isempty(bn)~=1
                 at_tempRN(at_tempN==q1(ar))=ar;
             end;
             nqR=unique(at_tempR);nqR=nqR(nqR~=0);nqR=nqR(nqR~=an);
-
             % mpara.save_figure=1;
             at_temp_L=getAtlasEdge(at_tempR,3,0,1);
-            if mpara.save_figure==1
-                cmap1=jet(double(max(at_tempR(:))));
-                icmap=randperm(size(cmap1,1));
-                cmap2=cmap1(icmap,:);cmap2(an,:)=[1 0 1];
-                imF1 = labeloverlay(uint8(ims1p2),at_temp_L,'Colormap',cmap2,'Transparency',0);
-                if mpara.save_figure==1
-                    figure(3);imshow(imF1);axis image;hold on
-                    bwxxx=zeros(size(at_tempR));bwxxx(at_tempR==an)=1;
-                    figure(1);imagesc(at_tempR);axis image
-                    bwxxxL=getAtlasEdge(bwxxx,1,0);
-                end
-            end
+            % if mpara.save_figure==1
+            %     cmap1=jet(double(max(at_tempR(:))));
+            %     icmap=randperm(size(cmap1,1));
+            %     cmap2=cmap1(icmap,:);cmap2(an,:)=[1 0 1];
+            %     imF1 = labeloverlay(uint8(ims1p2),at_temp_L,'Colormap',cmap2,'Transparency',0);
+            %     if mpara.save_figure==1
+            %         figure(3);imshow(imF1);axis image;hold on
+            %         bwxxx=zeros(size(at_tempR));bwxxx(at_tempR==an)=1;
+            %         figure(1);imagesc(at_tempR);axis image
+            %         bwxxxL=getAtlasEdge(bwxxx,1,0);
+            %     end
+            % end
             %if opt.distCE==1
-            clear xyc cp xycN cpN
+            %clear xyc cp xycN cpN
             stats_at = regionprops(at_tempR,'centroid');
-            xyc(:,1)=ones(length(stats_at),1)*stats_at(an).Centroid(1);
-            xyc(:,2)=ones(length(stats_at),1)*stats_at(an).Centroid(2);
+            xyc1=ones(length(stats_at),1)*stats_at(an).Centroid(1);
+            xyc2=ones(length(stats_at),1)*stats_at(an).Centroid(2);
             cp=[reshape([stats_at.Centroid],2,length(stats_at))]';
-            dn=((xyc(:,1)-cp(:,1)).^2+(xyc(:,2)-cp(:,2)).^2).^0.5;
-
+            dn=((xyc1-cp(:,1)).^2+(xyc2-cp(:,2)).^2).^0.5;
 
             stats_atN = regionprops(at_tempRN,'centroid');
-            xycN(:,1)=ones(length(stats_atN),1)*stats_atN(an).Centroid(1);
-            xycN(:,2)=ones(length(stats_atN),1)*stats_atN(an).Centroid(2);
+            xycN1=ones(length(stats_atN),1)*stats_atN(an).Centroid(1);
+            xycN2=ones(length(stats_atN),1)*stats_atN(an).Centroid(2);
             cpN=[reshape([stats_atN.Centroid],2,length(stats_atN))]';
-            dnN=((xycN(:,1)-cpN(:,1)).^2+(xycN(:,2)-cpN(:,2)).^2).^0.5;
+            dnN=((xycN1-cpN(:,1)).^2+(xycN2-cpN(:,2)).^2).^0.5;
 
-            if mpara.save_figure==1
-                bw0Lall=uint8(false(size(ims1p2)));
-            end
+            % if mpara.save_figure==1
+            %     bw0Lall=uint8(false(size(ims1p2)));
+            % end
             bw0Lkeep=uint8(false(size(ims1p2)));
             %if mpara.save_figure==1
             at_temp_L2=uint8(false(size(ims1p2)));
             %end
             at_tempR2=uint8(false(size(ims1p2)));
-            if mpara.save_figure==1
-                at_tempRN2=uint8(false(size(ims1p2)));
-                at_tempRN3=uint8(false(size(ims1p2)));
-            end
+            % if mpara.save_figure==1
+            %at_tempRN2=uint8(false(size(ims1p2)));
+            %at_tempRN3=uint8(false(size(ims1p2)));
+            % end
             %tt5=1;
-            if mpara.save_figure==1
-                bw0Lkeep_disp=uint8(false(size(ims1p2)));
-                bw0Lkeep_dispN2=uint8(false(size(ims1p2)));
-                bw0Lkeep_dispN3=uint8(false(size(ims1p2)));
-            end
+            % if mpara.save_figure==1
+            %     bw0Lkeep_disp=uint8(false(size(ims1p2)));
+            %     bw0Lkeep_dispN2=uint8(false(size(ims1p2)));
+            %     bw0Lkeep_dispN3=uint8(false(size(ims1p2)));
+            % end
             for dd=1:length(stats_at)
-
                 bw1a=uint8(false(size(ims1p2)));
                 if dd~=an
                     if isnan(cp(dd,2))~=1
-                        bw0L1=ptconnect_02(round([xyc(dd,2) xyc(dd,1)]),round([cp(dd,2) cp(dd,1)]),size(ims1p2));
-                        if mpara.save_figure==1
-                            [~,bw0L1inc]=BW_Edge_Modified_v09(bw0L1, 1);
-                            bw0L1N=ptconnect_02(round([xycN(dd,2) xycN(dd,1)]),round([cpN(dd,2) cpN(dd,1)]),size(ims1p2));
-                            [~,bw0L1incN]=BW_Edge_Modified_v09(bw0L1N, 1);
-                        end
+                        bw0L1=ptconnect_02(round([xyc2(dd) xyc1(dd)]),round([cp(dd,2) cp(dd,1)]),size(ims1p2));
+                        %if mpara.save_figure==1
+                        %    [~,bw0L1inc]=BW_Edge_Modified_v09(bw0L1, 1);
+                        %    bw0L1N=ptconnect_02(round([xycN(dd,2) xycN(dd,1)]),round([cpN(dd,2) cpN(dd,1)]),size(ims1p2));
+                        %    [~,bw0L1incN]=BW_Edge_Modified_v09(bw0L1N, 1);
+                        %end
                         bw1a(bw0L1==1)=at_tempR(bw0L1==1);
                         uqb1a=unique(bw1a);uqb1a=uqb1a(uqb1a~=0);
                         uqb1a=uqb1a(uqb1a~=an);uqb1a=uqb1a(uqb1a~=dd);
@@ -474,18 +571,15 @@ if isempty(bn)~=1
                             %dnb0(dd)=dn(dd);%tt5=tt5+1;
                             at_temp_L2(at_temp_L==dd)=dd;
                             at_tempR2(at_tempR==dd)=dd;
-                            if mpara.save_figure==1
-                                at_tempRN2(at_tempRN==dd)=dd;
-                            end
-                            if mpara.save_figure==1
-                                bw0Lkeep_disp(bw0L1inc==1)=dd;
-                                bw0Lkeep_dispN2(bw0L1incN==1)=dd;
-
-                            end
+                            % if mpara.save_figure==1
+                            %     at_tempRN2(at_tempRN==dd)=dd;
+                            %     bw0Lkeep_disp(bw0L1inc==1)=dd;
+                            %     bw0Lkeep_dispN2(bw0L1incN==1)=dd;
+                            % end
                         end
-                        if mpara.save_figure==1
-                            bw0Lall(bw0L1inc==1)=dd;
-                        end
+                        % if mpara.save_figure==1
+                        %     bw0Lall(bw0L1inc==1)=dd;
+                        % end
                     end
                 end
             end
@@ -493,19 +587,19 @@ if isempty(bn)~=1
             %dnb=dnb0(dnb0~=0);
             uqL2=unique(at_temp_L2);uqL2=uqL2(uqL2~=0);
             at_temp_L2(at_temp_L==an)=an;
-            if mpara.save_figure==1
-                %mean(dnb)
-                imF2 = labeloverlay(uint8(imF1),bw0Lall,'Colormap',cmap2,'Transparency',0);
-                figure(40);imshow(imF2);axis image;hold on
-                imF1b = labeloverlay(uint8(ims1p2),at_temp_L2,'Colormap',cmap2,'Transparency',0);
-                imF2b = labeloverlay(uint8(imF1b),bw0Lkeep_disp,'Colormap',cmap2,'Transparency',0);
-                figure(41);imshow(imF2b);axis image;hold on
-            end
+            % if mpara.save_figure==1
+            %     %mean(dnb)
+            %     imF2 = labeloverlay(uint8(imF1),bw0Lall,'Colormap',cmap2,'Transparency',0);
+            %     figure(40);imshow(imF2);axis image;hold on
+            %     imF1b = labeloverlay(uint8(ims1p2),at_temp_L2,'Colormap',cmap2,'Transparency',0);
+            %     imF2b = labeloverlay(uint8(imF1b),bw0Lkeep_disp,'Colormap',cmap2,'Transparency',0);
+            %     figure(41);imshow(imF2b);axis image;hold on
+            % end
             bw2keep=uint8(false(size(ims1p2)));
-            if mpara.save_figure==1
-                bw2keep_disp=uint8(false(size(ims1p2)));
-                bw2keep_dispL=uint8(false(size(ims1p2)));
-            end
+            %if mpara.save_figure==1
+            %    bw2keep_disp=uint8(false(size(ims1p2)));
+            %    bw2keep_dispL=uint8(false(size(ims1p2)));
+            %end
             at_temp_L3=uint8(false(size(ims1p2)));
             at_tempR3=uint8(false(size(ims1p2)));
             indkeep=zeros(1,length(uqL2));
@@ -513,10 +607,10 @@ if isempty(bn)~=1
             for dd=1:length(uqL2)
                 bwt1=uint8(false(size(ims1p2)));
                 bw2a=uint8(false(size(ims1p2)));
-                clear yxt bw0L1
+                %clear yxt bw0L1
                 bwt1(at_temp_L2==uqL2(dd))=1;
-                [yxt(:,1),yxt(:,2)]=find(bwt1==1); %y-x
-                bw0L1=ptconnect_02(round([stats_at(an).Centroid(2) stats_at(an).Centroid(1)]),yxt,size(ims1p2),1);
+                [yxt1,yxt2]=find(bwt1==1); %y-x
+                bw0L1=ptconnect_02(round([stats_at(an).Centroid(2) stats_at(an).Centroid(1)]),[yxt1  yxt2],size(ims1p2),1);
                 bw0L1=imfill(uint8(bw0L1));[~,bw0L1]=BW_Edge_Modified_v09(bw0L1, -2);
                 bwt2=uint8(bw0L1)+bwt1;
                 bwach=uint8(false(size(ims1p2)));bwach(at_tempR==uqL2(dd))=1;
@@ -532,14 +626,14 @@ if isempty(bn)~=1
                     indkeep(dd)=uqL2(dd);%tt5=tt5+1;
                     at_temp_L3(at_temp_L2==uqL2(dd))=uqL2(dd);
                     at_tempR3(at_tempR2==uqL2(dd))=uqL2(dd);
-                    if mpara.save_figure==1
-                        at_tempRN3(at_tempRN2==uqL2(dd))=uqL2(dd);
-                    end
+                    % if mpara.save_figure==1
+                    %     at_tempRN3(at_tempRN2==uqL2(dd))=uqL2(dd);
+                    % end
                 else
                     %%check overlap size
-                    if mpara.save_figure==1
-                        figure(113);imagesc(bw2a);axis image
-                    end
+                    % if mpara.save_figure==1
+                    %     figure(113);imagesc(bw2a);axis image
+                    % end
                     bw2a(bw2a==an)=0;
                     bw2a(bw2a~=0)=1;
                     if sum(bw2a(:))<=100
@@ -548,83 +642,79 @@ if isempty(bn)~=1
                         indkeep(dd)=uqL2(dd);%tt5=tt5+1;
                         at_temp_L3(at_temp_L2==uqL2(dd))=uqL2(dd);
                         at_tempR3(at_tempR2==uqL2(dd))=uqL2(dd);
-                        if mpara.save_figure==1
-                            at_tempRN3(at_tempRN2==uqL2(dd))=uqL2(dd);
-                        end
+                        % if mpara.save_figure==1
+                        %     at_tempRN3(at_tempRN2==uqL2(dd))=uqL2(dd);
+                        % end
                     else
-                        if mpara.save_figure==1
-                            bw0Lkeep_disp(bw0Lkeep_disp==uqL2(dd))=0;
-                            bw0Lkeep_dispN2(bw0Lkeep_dispN2==uqL2(dd))=0;
-                        end
+                        % if mpara.save_figure==1
+                        %     bw0Lkeep_disp(bw0Lkeep_disp==uqL2(dd))=0;
+                        %     bw0Lkeep_dispN2(bw0Lkeep_dispN2==uqL2(dd))=0;
+                        % end
                     end
 
 
                 end
-                if mpara.save_figure==1
-                    bw2keep_disp(bw0L1==1)=uqL2(dd);
-                    bw0L1E=BW_Edge_Modified_v09(bw0L1, -1);
-                    bw2keep_dispL(bw0L1E==1)=uqL2(dd);
-
-                    %                 imF2b = labeloverlay(uint8(imF1b),bw0Lkeep_disp,'Colormap',cmap2,'Transparency',0);
-                    %                 at_temp_L4=at_temp_L3;at_temp_L4(at_temp_L3~=an)=0;
-                    %                 imF2b = labeloverlay(imF2b,at_temp_L4,'Colormap',cmap2,'Transparency',0.5);
-                    %                 figure(51);imshow(imF2b);axis image;hold on
-
-                end
+                % if mpara.save_figure==1
+                %     bw2keep_disp(bw0L1==1)=uqL2(dd);
+                %     bw0L1E=BW_Edge_Modified_v09(bw0L1, -1);
+                %     bw2keep_dispL(bw0L1E==1)=uqL2(dd);
+                % 
+                %     %                 imF2b = labeloverlay(uint8(imF1b),bw0Lkeep_disp,'Colormap',cmap2,'Transparency',0);
+                %     %                 at_temp_L4=at_temp_L3;at_temp_L4(at_temp_L3~=an)=0;
+                %     %                 imF2b = labeloverlay(imF2b,at_temp_L4,'Colormap',cmap2,'Transparency',0.5);
+                %     %                 figure(51);imshow(imF2b);axis image;hold on
+                % 
+                % end
             end
 
-            if mpara.save_figure==1
-                imF2 = labeloverlay(uint8(imF1),bw0Lall,'Colormap',cmap2,'Transparency',0);
-                cn=unique(at_temp_L3);cn=cn(cn~=0);
-                cmap3=jet(length(cn));cmap4=cmap2;
-                for nn=1:length(cn);cmap4(cn(nn),:)=cmap3(nn,:);end;cmap4(an,:)=[1 0 1];
-                %cmap2=cmap4;
-                %cmap2=cmap2(randperm(size(cmap1,1)),:)
-                imF1b = labeloverlay(uint8(ims1p2),at_temp_L2,'Colormap',cmap2,'Transparency',0);
-                imF2b = labeloverlay(uint8(imF1b),bw2keep_disp,'Colormap',cmap2,'Transparency',0.7);
-                imF2b = labeloverlay(imF2b,bw2keep_dispL,'Colormap',cmap2,'Transparency',0.1);
-                at_temp_L3(at_temp_L==an)=an;
-                imF1b = labeloverlay(uint8(ims1p2),at_temp_L3,'Colormap',cmap2,'Transparency',0.5);
-                figure(50);imshow(imF2b);axis image;hold on
-                imF2b = labeloverlay(uint8(imF1b),bw0Lkeep_disp,'Colormap',cmap2,'Transparency',0);
-                at_temp_L4=at_temp_L3;at_temp_L4(at_temp_L3~=an)=0;
-                imF2b = labeloverlay(imF2b,at_temp_L4,'Colormap',cmap2,'Transparency',0.0);
-                figure(51);imshow(imF2b);axis image;hold on
-
-                bwL3=at_temp_L3;
-                bwL3(at_temp_L3~=0)=1;
-                rbwl3=roical_02(bwL3,bwL3);
-
-                figure(52);imshow(imF2b(rbwl3.udlr(1):rbwl3.udlr(2),rbwl3.udlr(3):rbwl3.udlr(4),:));axis image;hold on
-
-                imF1b = labeloverlay(uint8(ims1p2),at_temp_L2,'Colormap',cmap2,'Transparency',0);
-                imF2b = labeloverlay(uint8(imF1b),bw2keep_disp,'Colormap',cmap2,'Transparency',0.7);
-                imF2b = labeloverlay(imF2b,bw2keep_dispL,'Colormap',cmap2,'Transparency',0.1);
-                at_temp_L3(at_temp_L==an)=an;
-                imF1b = labeloverlay(uint8(ims1p2),at_temp_L3,'Colormap',cmap2,'Transparency',0.5);
-                figure(55);imshow(imF2b);axis image;hold on
-                imF2b = labeloverlay(uint8(imF1b),bw0Lkeep_disp,'Colormap',cmap2,'Transparency',0);
-                at_temp_L4=at_temp_L3;at_temp_L4(at_temp_L3~=an)=0;
-                imF2b = labeloverlay(imF2b,at_temp_L4,'Colormap',cmap2,'Transparency',0.5);
-                figure(56);imshow(imF2b);axis image;hold on
-
-                bwL3=at_temp_L3;
-                bwL3(at_temp_L3~=0)=1;
-                rbwl3=roical_02(bwL3,bwL3);
-
-                figure(57);imshow(imF2b(rbwl3.udlr(1):rbwl3.udlr(2),rbwl3.udlr(3):rbwl3.udlr(4),:));axis image;hold on
-
-                %%%%%%%%%%%%%%%
-                at_tempRN3(at_tempRN==an)=an;
-                at_tempRN3_L=getAtlasEdge(at_tempRN3,2,0,1);
-                imF1b = labeloverlay(uint8(ims1p2),at_tempRN3_L,'Colormap',cmap2,'Transparency',0);
-                figure(58);imshow(imF1b);axis image;hold on
-                imF1b = labeloverlay(uint8(imF1b),bw0Lkeep_dispN2,'Colormap',cmap2,'Transparency',0.4);
-
-                figure(59);imshow(imF1b);axis image;hold on
-                
-
-            end
+            % if mpara.save_figure==1
+            %     imF2 = labeloverlay(uint8(imF1),bw0Lall,'Colormap',cmap2,'Transparency',0);
+            %     cn=unique(at_temp_L3);cn=cn(cn~=0);
+            %     cmap3=jet(length(cn));cmap4=cmap2;
+            %     for nn=1:length(cn);cmap4(cn(nn),:)=cmap3(nn,:);end;cmap4(an,:)=[1 0 1];
+            %     %cmap2=cmap4;
+            %     %cmap2=cmap2(randperm(size(cmap1,1)),:)
+            %     imF1b = labeloverlay(uint8(ims1p2),at_temp_L2,'Colormap',cmap2,'Transparency',0);
+            %     imF2b = labeloverlay(uint8(imF1b),bw2keep_disp,'Colormap',cmap2,'Transparency',0.7);
+            %     imF2b = labeloverlay(imF2b,bw2keep_dispL,'Colormap',cmap2,'Transparency',0.1);
+            %     at_temp_L3(at_temp_L==an)=an;
+            %     imF1b = labeloverlay(uint8(ims1p2),at_temp_L3,'Colormap',cmap2,'Transparency',0.5);
+            %     figure(50);imshow(imF2b);axis image;hold on
+            %     imF2b = labeloverlay(uint8(imF1b),bw0Lkeep_disp,'Colormap',cmap2,'Transparency',0);
+            %     at_temp_L4=at_temp_L3;at_temp_L4(at_temp_L3~=an)=0;
+            %     imF2b = labeloverlay(imF2b,at_temp_L4,'Colormap',cmap2,'Transparency',0.0);
+            %     figure(51);imshow(imF2b);axis image;hold on
+            % 
+            %     bwL3=at_temp_L3;
+            %     bwL3(at_temp_L3~=0)=1;
+            %     rbwl3=roical_02(bwL3,bwL3);
+            % 
+            %     figure(52);imshow(imF2b(rbwl3.udlr(1):rbwl3.udlr(2),rbwl3.udlr(3):rbwl3.udlr(4),:));axis image;hold on
+            % 
+            %     imF1b = labeloverlay(uint8(ims1p2),at_temp_L2,'Colormap',cmap2,'Transparency',0);
+            %     imF2b = labeloverlay(uint8(imF1b),bw2keep_disp,'Colormap',cmap2,'Transparency',0.7);
+            %     imF2b = labeloverlay(imF2b,bw2keep_dispL,'Colormap',cmap2,'Transparency',0.1);
+            %     at_temp_L3(at_temp_L==an)=an;
+            %     imF1b = labeloverlay(uint8(ims1p2),at_temp_L3,'Colormap',cmap2,'Transparency',0.5);
+            %     figure(55);imshow(imF2b);axis image;hold on
+            %     imF2b = labeloverlay(uint8(imF1b),bw0Lkeep_disp,'Colormap',cmap2,'Transparency',0);
+            %     at_temp_L4=at_temp_L3;at_temp_L4(at_temp_L3~=an)=0;
+            %     imF2b = labeloverlay(imF2b,at_temp_L4,'Colormap',cmap2,'Transparency',0.5);
+            %     figure(56);imshow(imF2b);axis image;hold on
+            % 
+            %     bwL3=at_temp_L3;
+            %     bwL3(at_temp_L3~=0)=1;
+            %     rbwl3=roical_02(bwL3,bwL3);
+            % 
+            %     figure(57);imshow(imF2b(rbwl3.udlr(1):rbwl3.udlr(2),rbwl3.udlr(3):rbwl3.udlr(4),:));axis image;hold on
+            %     %%%%%%%%%%%%%%%
+            %     at_tempRN3(at_tempRN==an)=an;
+            %     at_tempRN3_L=getAtlasEdge(at_tempRN3,2,0,1);
+            %     imF1b = labeloverlay(uint8(ims1p2),at_tempRN3_L,'Colormap',cmap2,'Transparency',0);
+            %     figure(58);imshow(imF1b);axis image;hold on
+            %     imF1b = labeloverlay(uint8(imF1b),bw0Lkeep_dispN2,'Colormap',cmap2,'Transparency',0.4);
+            %     figure(59);imshow(imF1b);axis image;hold on
+            % end
 
             at_temp_L3(at_temp_L==an)=an;
             %unique(at_temp_L3)
@@ -638,7 +728,6 @@ if isempty(bn)~=1
             end
 
             indkeep=indkeep(indkeep~=an);  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
             distadjc0=dn(indkeep);        %diststdth=(distadjc0-1)*psize;
             id_dist0=q1(indkeep);
             distC_mean(bcp,1)=mean(distadjc0-1)*psize;
@@ -650,11 +739,11 @@ if isempty(bn)~=1
             %distC_id(bcp,1:length(id_dist0))=id_dist0'; %[id_dist0(distadjc0_sort(:,2))]';
 
             % distance from nuclei mask
-            try
-                distadjc0N=dnN(indkeep);
-            catch
-                bcp
-            end
+            %try
+            distadjc0N=dnN(indkeep);
+            % catch
+            %     bcp
+            % end
             id_dist0N=q1(indkeep);
             distN_mean(bcp,1)=mean(distadjc0N-1)*psize;
             distN_std(bcp,1)=std(distadjc0N-1)*psize;
@@ -679,8 +768,6 @@ if isempty(bn)~=1
             else
                 distC_slr(bcp,:)=-1;
             end
-
-
             if isempty(distadjc0N)~=1
                 if max(distadjc0N-1)~=0
                     distN_slr(bcp,:)=min(distadjc0N-1)./max(distadjc0N-1);
@@ -690,9 +777,6 @@ if isempty(bn)~=1
             else
                 distN_slr(bcp,:)=-1;
             end
-
-
-
             bwLall0E=uint8(false(size(ims1p2)));
             bwE0=uint8(false(size(ims1p2)));
             bwE0(at_temp_L3==an)=1;
@@ -707,47 +791,47 @@ if isempty(bn)~=1
                 bwE1=false(size(ims1p2));
                 bwE1(at_temp_L3==indkeep(dd))=true;
                 dist=bwEdist(bwE0,bwE1,1); %x-y
-                if mpara.save_figure==1
-                    %figure(112);imagesc(bwttt);axis image
-                    %ptconnect_02: y-x
-                    bwbridge=ptconnect_02(flip(dist.shortest_pixel{1}),flip(dist.shortest_pixel{2}),size(ims1p2),1);
-                    figure(111);imagesc(uint8(bwE1)+bwE0+uint8(bwbridge));axis image
-                end
+                %if mpara.save_figure==1
+                %    %figure(112);imagesc(bwttt);axis image
+                %    %ptconnect_02: y-x
+                %    bwbridge=ptconnect_02(flip(dist.shortest_pixel{1}),flip(dist.shortest_pixel{2}),size(ims1p2),1);
+                %    figure(111);imagesc(uint8(bwE1)+bwE0+uint8(bwbridge));axis image
+                %end
                 %bwLkeep0E(bwbridge==1)=indkeep(dd);
                 dist_adjc0E(dd)=dist.shortest_dist;%tt5=tt5+1;
                 xy_e0(dd,:)=dist.shortest_pixel{1};
                 xy_e1(dd,:)=dist.shortest_pixel{2};
-                if mpara.save_figure==1
-                    [~,bwbridge]=BW_Edge_Modified_v09(bwbridge, 3);
-                    bwLall0E(bwbridge==1)=indkeep(dd);
-                end
+                %if mpara.save_figure==1
+                %    [~,bwbridge]=BW_Edge_Modified_v09(bwbridge, 3);
+                %    bwLall0E(bwbridge==1)=indkeep(dd);
+                %end
             end
 
-            if mpara.save_figure==1
-                %  imF3 = labeloverlay(uint8(imF1),bwLall0E,'Colormap',cmap2,'Transparency',0);
-                % figure(70);imshow(imF3);axis image;hold on
-                imF3b = labeloverlay(uint8(ims1p2),at_temp_L3,'Colormap',cmap2,'Transparency',0.5);
-                imF3b = labeloverlay(uint8(imF3b),bwLall0E,'Colormap',cmap2,'Transparency',0);
-                at_temp_L4=at_temp_L3;at_temp_L4(at_temp_L3~=an)=0;
-                imF3b = labeloverlay(uint8(imF3b),at_temp_L4,'Colormap',cmap2,'Transparency',0);
-                figure(71);imshow(imF3b);axis image;hold on
-
-                bwL3=at_temp_L3;
-                bwL3(at_temp_L3~=0)=1;
-                rbwl3=roical_02(bwL3,bwL3);
-                figure(72);imshow(imF3b(rbwl3.udlr(1):rbwl3.udlr(2),rbwl3.udlr(3):rbwl3.udlr(4),:));axis image;hold on
-
-                imF3b = labeloverlay(uint8(ims1p3),at_temp_L3,'Colormap',cmap2,'Transparency',0.5);
-                imF3b = labeloverlay(uint8(imF3b),bwLall0E,'Colormap',cmap2,'Transparency',0);
-                at_temp_L4=at_temp_L3;at_temp_L4(at_temp_L3~=an)=0;
-                imF3b = labeloverlay(uint8(imF3b),at_temp_L4,'Colormap',cmap2,'Transparency',0);
-                figure(75);imshow(imF3b);axis image;hold on
-
-                bwL3=at_temp_L3;
-                bwL3(at_temp_L3~=0)=1;
-                rbwl3=roical_02(bwL3,bwL3);
-                figure(76);imshow(imF3b(rbwl3.udlr(1):rbwl3.udlr(2),rbwl3.udlr(3):rbwl3.udlr(4),:));axis image;hold on
-            end
+            % if mpara.save_figure==1
+            %     %  imF3 = labeloverlay(uint8(imF1),bwLall0E,'Colormap',cmap2,'Transparency',0);
+            %     % figure(70);imshow(imF3);axis image;hold on
+            %     imF3b = labeloverlay(uint8(ims1p2),at_temp_L3,'Colormap',cmap2,'Transparency',0.5);
+            %     imF3b = labeloverlay(uint8(imF3b),bwLall0E,'Colormap',cmap2,'Transparency',0);
+            %     at_temp_L4=at_temp_L3;at_temp_L4(at_temp_L3~=an)=0;
+            %     imF3b = labeloverlay(uint8(imF3b),at_temp_L4,'Colormap',cmap2,'Transparency',0);
+            %     figure(71);imshow(imF3b);axis image;hold on
+            % 
+            %     bwL3=at_temp_L3;
+            %     bwL3(at_temp_L3~=0)=1;
+            %     rbwl3=roical_02(bwL3,bwL3);
+            %     figure(72);imshow(imF3b(rbwl3.udlr(1):rbwl3.udlr(2),rbwl3.udlr(3):rbwl3.udlr(4),:));axis image;hold on
+            % 
+            %     imF3b = labeloverlay(uint8(ims1p3),at_temp_L3,'Colormap',cmap2,'Transparency',0.5);
+            %     imF3b = labeloverlay(uint8(imF3b),bwLall0E,'Colormap',cmap2,'Transparency',0);
+            %     at_temp_L4=at_temp_L3;at_temp_L4(at_temp_L3~=an)=0;
+            %     imF3b = labeloverlay(uint8(imF3b),at_temp_L4,'Colormap',cmap2,'Transparency',0);
+            %     figure(75);imshow(imF3b);axis image;hold on
+            % 
+            %     bwL3=at_temp_L3;
+            %     bwL3(at_temp_L3~=0)=1;
+            %     rbwl3=roical_02(bwL3,bwL3);
+            %     figure(76);imshow(imF3b(rbwl3.udlr(1):rbwl3.udlr(2),rbwl3.udlr(3):rbwl3.udlr(4),:));axis image;hold on
+            % end
             %distE01(bcp)=mean(dnb3-1)*psize;
             distE_mean(bcp,1)=mean(dist_adjc0E-1)*psize;
             distE_std(bcp,1)=std(dist_adjc0E-1)*psize;
@@ -770,217 +854,35 @@ if isempty(bn)~=1
             %end
             %%{
 
-
-            if mpara.save_figure==1
-                C_mean=mean(distadjc0-1)*psize
-                C_std=std(distadjc0-1)*psize
-                C_median=median(distadjc0-1)*psize
-                size(distadjc0,1)
-
-                E_mean=mean(dist_adjc0E-1)*psize
-                E_std=std(dist_adjc0E-1)*psize
-                E_median=median(dist_adjc0E-1)*psize
-
-            end
+            % if mpara.save_figure==1
+            %     C_mean=mean(distadjc0-1)*psize
+            %     C_std=std(distadjc0-1)*psize
+            %     C_median=median(distadjc0-1)*psize
+            %     size(distadjc0,1)
+            % 
+            %     E_mean=mean(dist_adjc0E-1)*psize
+            %     E_std=std(dist_adjc0E-1)*psize
+            %     E_median=median(dist_adjc0E-1)*psize
+            % end
             %}
             %mpara.save_figure=0;
         end
 
 
-
-        if mpara.save_figure==1
-            bfcsize=fix((boxtemp(3:4)/2)*1.4);
-            bfc=fix([fix(boxtemp(2)+boxtemp(4)/2)-bfcsize(2) fix(boxtemp(2)+boxtemp(4)/2)+bfcsize(2),...
-                fix(boxtemp(1)+boxtemp(3)/2)-bfcsize(1) fix(boxtemp(1)+boxtemp(3)/2)+bfcsize(1)]);
-            imdisp=data1.im0gray(bfc(1):bfc(2),bfc(3):bfc(4));
-            bw_disp=data1.(select_data).atlas_allcell_N(bfc(1):bfc(2),bfc(3):bfc(4));
-            bw_disp(bw_disp~=qnum(bcp))=0;
-            bw_disp(bw_disp==qnum(bcp))=1;
-            bw_core_disp=atlas_allcellcore_N(bfc(1):bfc(2),bfc(3):bfc(4));
-            bw_core_disp(bw_core_disp~=qnum(bcp))=0;
-            bw_core_disp(bw_core_disp==qnum(bcp))=1; figure(1);imagesc(stats1(bcp).Image)
-
-            bw_core_ch_disp=bwconvhull(bw_core_disp);
-            bw_ch_disp=bwconvhull(bw_disp);
-
-            state_cell_disp=regionprops(uint8(bw_disp),'Centroid','MaxFeretProperties');
-            bw_centroid=zeros(size(bw_core_disp));bw_centroid(round(state_cell_disp.Centroid(2)),round(state_cell_disp.Centroid(1)))=1;
-            state_core_disp=regionprops(uint8(bw_core_disp),'Centroid');
-            bw_core_centroid=zeros(size(bw_core_disp));bw_core_centroid(round(state_core_disp.Centroid(2)),round(state_core_disp.Centroid(1)))=1;
-
-            [dist,bwbridge]=bwdistant02(bw_centroid,bw_core_centroid);
-            bw_cell_chMsp1=zeros(size(bw_core_disp));bw_cell_chMsp1(round(state_cell_disp.MaxFeretCoordinates(1,2)),round(state_cell_disp.MaxFeretCoordinates(1,1)))=1;
-            bw_cell_chMsp2=zeros(size(bw_core_disp));bw_cell_chMsp2(round(state_cell_disp.MaxFeretCoordinates(2,2)),round(state_cell_disp.MaxFeretCoordinates(2,1)))=1;
-            [dist,bwbridge_chMsp]=bwdistant02(bw_cell_chMsp1,bw_cell_chMsp2);
-
-            f1=figure(20);%bbi=1
-            set(gcf,'Position',src);
-            subplot(4,6,bbi);bbi=bbi+1;
-            imagesc_bw(imdisp,[0 255],'gray',255,{bw_disp,bw_core_disp},{[102 178 255],[255 69 0]},[1,1],[-1,-1]);axis image;
-            %             figure(21);
-            %           imagesc_bw(imdisp,[0 255],'gray',255,{bw_disp,bw_core_ch_disp,bw_core_disp,bw_ch_disp,bw_centroid,bw_core_centroid,bwbridge,bw_cell_chMsp1,bw_cell_chMsp2,bwbridge_chMsp},...
-            %                {'b','y','r','g','c','c','c','m','m','m'},[-1,1,-1,1,1,1,0,1,1,0],[-1,-1,-1,-1,1,1,6,1,1,9]);axis image;
-            %
-
-            if sum(strcmp(table_cocoA_sort.Properties.VariableNames,'category_id4_name'))~=0
-                title([table_cocoA_sort.category_id4_name{bb} ' (' num2str(bb) ')'],'interpreter','none');%axis off
-            elseif sum(strcmp(table_cocoA_sort.Properties.VariableNames,'category_id2_name'))~=0
-                title([table_cocoA_sort.category_id2_name{bb} ' (' num2str(bb) ')'],'interpreter','none');%axis off
-            else
-                title(['(' num2str(bb) ')'],'interpreter','none');%axis off
-            end
-            if mod(bb,24)==0 || bb==len
-                if bb-23<10;txtz1='00000';end;if bb<10;txtz2='00000';end
-                if bb-23>=10 && bb-23<100;txtz1='0000';end;if bb>=10 && bb<100;txtz2='0000';end
-                if bb-23>=100 && bb-23<1000;txtz1='000';end;if bb>=100 && bb<1000;txtz2='000';end
-                if bb-23>=1000 && bb-23<10000;txtz1='00';end;if bb>=1000 && bb<10000;txtz2='00';end
-                if bb-23>=10000 && bb-23<100000;txtz1='0';end;if bb>=10000 && bb<100000;txtz2='0';end
-
-                saveas(f1,[mpara.folder_fig_temp filesep 'f' txtz1 num2str(bb-23) 'to' txtz2 num2str(bb) '.jpg']);
-                bbi=1;
-                % pause(2);
-                %close all
-            end
-
-        end
-
-        %figure(1);imagesc(bwfd);axis image
-        %  lacunarity:ver1, not used: https://www.mathworks.com/matlabcentral/fileexchange/25261-lacunarity-of-a-binary-image?focused=5137364&tab=function&s_tid=gn_loc_drop
-        %  [LC2(bb,1), LCi]=lacunarity_chh(stats1(bb).Image);
-        %  if isempty(LC2(bb,1))==1;LC2(bb,1)=0;end
-
-        if opt.FD==1 || opt.LC==1
-            % figure(1);imagesc(stats1(bcp).Image)
-            %  rsizeN=256/max(size(stats1(bcp).Image));
-            %  bwfd2=imresize(stats1(bcp).Image,size(stats1(bcp).Image)*rsizeN,'nearest');
-
-
-            bwfdsize=size(stats1(bcp).Image)+mpara.FD_size_increase;
-            bwfd=zeros(bwfdsize);
-            bwfd(fix(size(bwfd,1)/2)-fix(size(stats1(bcp).Image,1)/2)+1:fix(size(bwfd,1)/2)-fix(size(stats1(bcp).Image,1)/2)+size(stats1(bcp).Image,1),...
-                fix(size(bwfd,2)/2)-fix(size(stats1(bcp).Image,2)/2)+1:fix(size(bwfd,2)/2)-fix(size(stats1(bcp).Image,2)/2)+size(stats1(bcp).Image,2))=stats1(bcp).Image;
-
-
-            [fracL]=lacunarity_Fraclac_chh02(bwfd,mparaFrac);
-            if opt.LC==1;LC(bcp,1)=fracL.Lacunarity;LCstd(bcp,1)=fracL.Lacunarity_std;end
-            if opt.FD==1;
-                %FD1(bcp,1)=fractalanalysis_chh01(stats1(bcp).Image);
-                %FD1(bcp,1)=fractalanalysis_chh01(bwfd);
-                FD(bcp,1)=-mean(fracL.F__logSlope__DBcounts);
-            end
-        end
-
-        %             bwfd1=zeros(fix(1.2*size(stats1(bb).Image)));
-        %             bwfd1(fix(size(bwfd1,1)/2)-fix(size(stats1(bb).Image,1)/2)+1:fix(size(bwfd1,1)/2)-fix(size(stats1(bb).Image,1)/2)+size(stats1(bb).Image,1),...
-        %                   fix(size(bwfd1,2)/2)-fix(size(stats1(bb).Image,2)/2)+1:fix(size(bwfd1,2)/2)-fix(size(stats1(bb).Image,2)/2)+size(stats1(bb).Image,2))=stats1(bb).Image;
-        %             if size(stats1(bb).Image,1)<=3 || size(stats1(bb).Image,2)<=3
-        %                 LC1(bb,1)=0;LCstd(bb,1)=0;
-        %                 FD1(bb,1)=0;
-        %             else
-        %                 [fracL]=lacunarity_Fraclac_chh01(bwfd1,mparaFrac);
-        %                 if isfield(fracL,'Lacunarity')==1
-        %                     LC1(bb,1)=fracL.Lacunarity;
-        %                     LCstd1(bb,1)=fracL.Lacunarity_std;
-        %                 else
-        %                     LC1(bb,1)=0;LCstd1(bb,1)=0;
-        %                 end
-        %                 if isfield(fracL,'F__logSlope__DBcounts')==1
-        %                     FD1(bb,1)=-mean(fracL.F__logSlope__DBcounts);
-        %                 else
-        %                     FD1(bb,1)=0;
-        %                 end
-        %             end
-
-        if opt.CHC==1 || opt.diameterBC==1 || opt.rMmCHr==1 || opt.meanCHrd==1
-            statsCH(bcp,1)=regionprops(stats1(bcp).ConvexImage,'Perimeter','Circularity','MaxFeretProperties','MinFeretProperties','Centroid','ConvexHull');
-        end
-        %     if opt.CHC==1 || opt.rMmCHr==1
-        %         imCH2=imresize(stats1(bcp).ConvexImage,size(stats1(bcp).ConvexImage)*10,'nearest');
-        %     end
-        if opt.CHC==1
-            stats1_chc=regionprops(stats1(bcp).ConvexImage, 'Perimeter','Circularity','Area');
-            % figure(1);imagesc(imCH2);figure(2);imagesc(stats1(bcp).ConvexImage)
-            ca0=sum(stats1(bcp).ConvexImage(:));cpi=[stats1_chc(:).Perimeter];cp0=sum(cpi);
-            CHC(bcp,1)=4*pi*ca0./(cp0.^2);
-        end
-
-        % A suite of minimal bounding objects: https://www.mathworks.com/matlabcentral/fileexchange/34767-a-suite-of-minimal-bounding-objects
-        % https://itectec.com/matlab/matlab-how-to-create-a-circles-smallest-and-biggest-circle-based-on-points-in-an-image-given-then-find-the-center-and-radius/
-        %[C1,R1] = minboundcircle(statsCH(bb).ConvexHull(:,1),statsCH(bb).ConvexHull(:,2));   % L
-        if opt.diameterBC==1 || opt.rMmCHr==1
-            [~,R1] = minboundcircle(stats1(bcp).ConvexHull(:,1),stats1(bcp).ConvexHull(:,2));   % L
-            diameterBC(bcp,1)=R1*2*psize;
-        end
-
-        %             bw2=zeros(size(stats1(bb).ConvexImage));bw2(fix(C1(2)),fix(C1(1)))=1;
-        %             D = bwdist(bw2);bw3=zeros(size(stats1(bb).ConvexImage));bw3(D<R1(bb,1))=1;
-        %             c=fix(statsCH(bb).ConvexHull);c(c==0)=1;for kk=1:size(statsCH(bb).ConvexHull,1);bw4(c(kk,2),c(kk,1))=1;end
-        %             bboxt0=ceil(stats1(bb).BoundingBox);im0=data1.im0gray(bboxt0(2):bboxt0(2)+bboxt0(4)-1,bboxt0(1):bboxt0(1)+bboxt0(3)-1);
-        if opt.rMmCHr==1 % cal from resize image v07r
-            %figure(1);imagesc(imCH2);axis image
-            %stats1_chc=regionprops(uint8(imCH2),'ConvexHull');
-            %[~,R1] = minboundcircle(stats1_chc.ConvexHull(:,1),stats1_chc.ConvexHull(:,2));
-            %[bwch_edgef]=BW_Edge_Modified_v09(imCH2, -1);[yb, xb]=find(bwch_edgef==true);[C2,R2] = incircle(xb,yb);
-            %rMmCHr(bcp,:)=R1/R2;
-
-
-            if size(stats1(bcp).ConvexImage,1)<=mpara.threshold_length(1) || size(stats1(bcp).ConvexImage,2)<=mpara.threshold_length(2)
-                rMmCHr(bcp,:)=1;   %N
-            else
-                [bwch_edgef]=BW_Edge_Modified_v09(stats1(bcp).ConvexImage, -1);
-                [yb, xb]=find(bwch_edgef==true);[C2,R2] = incircle(xb,yb);
-                rMmCHr(bcp,:)=R1/R2;   %N
-            end
-        end
-        %bw4=zeros(size(stats1(bb).ConvexImage));bw4(fix(C2(2)),fix(C2(1)))=1;
-        %D = bwdist(bw4);bw4=zeros(size(stats1(bb).ConvexImage));bw4(D<min(R2))=1;
-        %figure(1);imagesc_bw(im0,[0 255],'gray',255,{stats1(bb).ConvexImage,bw3,bw4},{'r','b','g'},-1,-1);
-        if opt.meanCHrd==1
-            if size(stats1(bcp).ConvexImage,1)<=mpara.threshold_length(1) || size(stats1(bcp).ConvexImage,2)<=mpara.threshold_length(1) || sum(stats1(bcp).ConvexImage(:))<=mpara.threshold_size(2)
-                meanCHrd(bcp,1)=0;
-            else
-                [bwch_edgef]=BW_Edge_Modified_v09(stats1(bcp).ConvexImage, -1);
-                [yb, xb]=find(bwch_edgef==true);
-                ys=round(statsCH(bcp).Centroid(2));xs=round(statsCH(bcp).Centroid(1));
-                dist00_bwch=((yb-repmat(ys,length(yb),1)).^2+(xb-repmat(xs,length(xb),1)).^2).^0.5;
-                meanCHrd(bcp,1)=psize*mean(dist00_bwch);               % mean radii of convex hull
-            end
-        end
-
-        if mod(bcp,3000)==0 || bcp==len
-            if isempty(varargin)~=1
-                bcpr=bcp;
-            end
-
-            toc
-            save(save_filename_temp,'bcp','bcpr','CA','CP','CC','CHC','diameterBC','rMmCHr','meanCHrd','FD','LC','LCstd','FM_BREN_bbox1p2',...
-                'statsCH','atlas_allcellcore_N','core_CA','core_mean','core_std','core_CP','core_CC','core_rCA','core_rCP','core_Cdist',...
-                'core_rCdistM','distC_mean','distC_std','distC_median','distC_N','dist_para','distC_slr','distE_slr',...
-                'distE_mean','distE_std','distE_median','iex',...
-                'distN_mean','distN_std','distN_median','distN_slr','-v7.3');
-
-            %         save(save_filename,'bcp','bcpr','CA','CP','CC','CHC','diameterBC','rMmCHr','meanCHrd','FD','LC','LCstd','FM_BREN_bbox1p2',...
-            %             'statsCH','atlas_allcellcore_N','core_CA','core_mean','core_std','core_CP','core_CC','core_rCA','core_rCP','core_Cdist',...
-            %             'core_rCdistM','distC_mean','distC_std','distC_median','distC_N','dist_para','distC_slr','distE_slr',...
-            %             'distE_mean','distE_std','distE_median','iex')
-            bcp
-        end
-        %%% paper figureS4 k-means Shrink Edge Algorithm
-        %     figure(9999);subplot(2,4,tttk);set(gcf,'color','w')
-        %     imagesc_bw(ims2,[0 255],'gray',255,{stats1(bcp).Image,bwcore},{'b','r'},-1,-1);axis image;axis off
-        %     disp.scalebar_position_yxr=[0.5 0.5];
-        %     disp.scale_bar=0.001;disp.scale_bar_color=[255 0 0];disp.scale_bar_thk=3;
-        %     if tttk==8;disp.scale_bar=0.001;
-        %     else;disp.scale_bar=0.01;
-        %     end
-        %     figure(9998);subplot(2,4,tttk);set(gcf,'color','w')
-        %     imsx2x=insertscaleBar(0*ims2,disp);
-        %     imagesc_bw(imsx2x,[0 255],'gray',255,{0*stats1(bcp).Image,0*bwcore},{'b','r'},-1,-1);axis image;axis off
-        %     tttk=tttk+1;
-
     end
 
+
+
+    save(save_filename_temp,'bcp','bcpr','CA','CP','CC','CHC','diameterBC','rMmCHr','meanCHrd','FD','LC','LCstd','FM_BREN_bbox1p2',...
+        'statsCH','atlas_allcellcore_N','core_CA','core_mean','core_std','core_CP','core_CC','core_rCA','core_rCP','core_Cdist',...
+        'core_rCdistM','distC_mean','distC_std','distC_median','distC_N','dist_para','distC_slr','distE_slr',...
+        'distE_mean','distE_std','distE_median','iex',...
+        'distN_mean','distN_std','distN_median','distN_slr','-v7.3');
+
+
 end
+
+%%
 %if opt.segmentation_core==1
 stats1_core=regionprops(atlas_allcellcore_N,'BoundingBox');
 bsize0=size(atlas_allcellcore_N);
